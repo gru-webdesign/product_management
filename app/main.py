@@ -43,8 +43,11 @@ def main() -> int:
         QMessageBox.critical(None, APP_NAME, f"Baza podataka nije mogla da se otvori:\n\n{exc}")
         return 1
 
-    from app.ui.main_window import MainWindow
+    from app.ui import theme
+    from app.ui.main_window import MainWindow, initial_theme
 
+    theme.load_fonts(app)
+    theme.apply(app, initial_theme(db))
     window = MainWindow(db)
     window.show()
     return app.exec()
