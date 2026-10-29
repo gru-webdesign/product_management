@@ -225,7 +225,13 @@ QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus, QSpinBox:focus,
 QDoubleSpinBox:focus, QDateEdit:focus, QComboBox:focus {{ border: 1px solid {t.accent}; }}
 QLineEdit:disabled, QDateEdit:disabled, QDoubleSpinBox:disabled {{ color: {t.faint};
     background: {t.surface_alt}; }}
-QComboBox::drop-down, QDateEdit::drop-down {{ border: none; width: 18px; }}
+QComboBox::drop-down, QDateEdit::drop-down {{ border: none; width: 22px;
+    subcontrol-origin: padding; subcontrol-position: center right; }}
+QComboBox::down-arrow, QDateEdit::down-arrow {{ image: url({_chevron(t)}); width: 12px;
+    height: 12px; }}
+QComboBox {{ padding-right: 24px; }}
+QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {{ width: 0; border: none; }}
+QDateEdit::up-button, QDateEdit::down-button {{ width: 0; }}
 QComboBox QAbstractItemView {{ background: {t.surface}; border: 1px solid {t.border};
     selection-background-color: {t.accent_soft}; selection-color: {t.text}; outline: none; }}
 
@@ -280,6 +286,10 @@ QGroupBox::title {{ subcontrol-origin: margin; left: 10px; padding: 0 4px; }}
 #KpiValue {{ font-size: 18px; font-weight: 600; }}
 #KpiLabel {{ color: {t.muted}; font-size: 11px; }}
 """
+
+
+def _chevron(t: Tokens) -> str:
+    return (FONTS_DIR.parent / "icons" / f"chevron-down-{t.name}.svg").as_posix()
 
 
 def repolish(widget) -> None:

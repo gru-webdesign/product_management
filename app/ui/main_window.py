@@ -164,6 +164,7 @@ class MainWindow(QMainWindow):
         self.ctx.message.connect(lambda m: self.statusBar().showMessage(m, 6000))
         self.ctx.project_changed.connect(self._project_changed)
         self.ctx.data_changed.connect(self.header.reload)
+        self.ctx.open_task_requested.connect(self.open_task)
         theme.manager().changed.connect(self._theme_changed)
 
         self._make_menu()
@@ -259,6 +260,11 @@ class MainWindow(QMainWindow):
         from app.ui.dialogs.task_dialog import open_new_task
 
         open_new_task(self.ctx, self)
+
+    def open_task(self, task_id: str) -> None:
+        from app.ui.dialogs.task_dialog import open_task
+
+        open_task(self.ctx, task_id, self)
 
     def open_share(self) -> None:
         if not self.ctx.project_id:

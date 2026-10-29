@@ -29,9 +29,18 @@ def bootstrap(paths=None) -> Database:
     return db
 
 
+def set_locale() -> None:
+    """Srpski (latinica) format brojeva i datuma: decimalni zarez, tačka za hiljade."""
+    from PySide6.QtCore import QLocale
+
+    locale = QLocale(QLocale.Language.Serbian, QLocale.Script.LatinScript, QLocale.Country.Serbia)
+    QLocale.setDefault(locale)
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     app = QApplication(sys.argv)
+    set_locale()
     app.setApplicationName(APP_NAME)
     app.setApplicationVersion(__version__)
     app.setOrganizationName(APP_NAME)
