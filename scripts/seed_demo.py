@@ -214,6 +214,16 @@ def seed(session: Session, today: date | None = None) -> Project:
         -1, 89, "Softver i licence", "Figma", currency="EUR", rate="117.2", note="Godišnja licenca"
     )
     cost(1, 9500, "Materijal", "Foto banka", t=content)
+    from app.services import timetracking as tt
+
+    for task_obj, day, hours, note in (
+        (brief, -9, 3.0, "Sastanak sa klijentom"),
+        (brief, -7, 2.5, "Lista sadržaja"),
+        (wire, -4, 5.5, "Početna i meni"),
+        (wire, -2, 4.0, "Izmene po komentarima"),
+        (design, 0, 3.25, "Paleta i tipografija"),
+    ):
+        tt.add_entry(session, task_obj.id, d(day), hours, note)
     budget_service.add_income(
         session, project.id, on=d(-9), amount_minor=to_minor(120000), description="Avans 50%"
     )

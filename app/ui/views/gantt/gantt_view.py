@@ -101,7 +101,7 @@ class GanttView(ProjectView):
         c.task_menu.connect(self._task_menu, queued)
         c.dependency_menu.connect(self._dependency_menu, queued)
         c.zoom_step.connect(self._zoom_step, queued)
-        theme.manager().changed.connect(lambda: self.chart.viewport().update())
+        theme.manager().changed.connect(self._theme_changed)
 
     # --- podaci ----------------------------------------------------------------------------------
 
@@ -143,6 +143,9 @@ class GanttView(ProjectView):
             p = project_service.get(s, self.ctx.project_id)
             extra = [d for d in (p.start_date, p.end_date) if d] if p else []
         self.chart.set_data(rows, milestones, deps, self.zoom, self.show_cost.isChecked(), extra)
+
+    def _theme_changed(self) -> None:
+        self.chart.viewport().update()
 
     def set_zoom(self, zoom: str) -> None:
         if zoom == self.zoom:

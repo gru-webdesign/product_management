@@ -193,6 +193,8 @@ QToolTip {{ background: {t.surface}; color: {t.text}; border: 1px solid {t.borde
 #SidebarTitle {{ font-size: 12px; font-weight: 500; color: {t.muted}; }}
 #AppName {{ font-size: 16px; font-weight: 600; }}
 #ProjectList {{ background: transparent; border: none; outline: none; }}
+#NavButton {{ text-align: left; padding: 7px 8px; border-radius: 6px; font-weight: 500; }}
+#NavButton:checked {{ background: {t.accent_soft}; color: {t.text}; }}
 #ProjectList::item {{ padding: 7px 8px; border-radius: 6px; margin: 1px 0; }}
 #ProjectList::item:hover {{ background: {t.border}; }}
 #ProjectList::item:selected {{ background: {t.accent_soft}; color: {t.text}; }}
@@ -299,7 +301,7 @@ QGroupBox::title {{ subcontrol-origin: margin; left: 10px; padding: 0 4px; }}
     border-radius: 8px; }}
 #Banner[level="over"] {{ background: {t.danger_soft}; border: 1px solid {t.danger};
     border-radius: 8px; }}
-#KpiValue {{ font-size: 19px; font-weight: 500; font-family: "Geist Mono", Consolas; }}
+#KpiValue {{ font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }}
 #KpiLabel {{ color: {t.muted}; font-size: 12px; }}
 """
 

@@ -55,6 +55,15 @@ def main() -> int:
         window.grab().save(str(out / name))
         print(out / name)
 
+    window.ctx.show_dashboard.emit()
+    for _ in range(5):
+        app.processEvents()
+    window.grab().save(str(out / f"0-dashboard{suffix}.png"))
+    print(out / f"0-dashboard{suffix}.png")
+    window.sidebar.select(window.ctx.project_id or "")
+    for _ in range(3):
+        app.processEvents()
+
     from app.services import tasks as task_service
     from app.ui.dialogs.task_dialog import TaskDialog
 

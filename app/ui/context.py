@@ -57,6 +57,11 @@ class AppContext(QObject):
             self.project_id = project_id
             self.project_changed.emit(project_id)
 
+    def open_project(self, project_id: str) -> None:
+        """Otvara projekat i kad je već izabran (npr. iz Pregleda)."""
+        self.project_id = project_id
+        self.project_changed.emit(project_id)
+
     def set_search(self, text: str) -> None:
         text = text.strip()
         if text != self.search:

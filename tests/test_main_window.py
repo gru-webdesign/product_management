@@ -53,3 +53,25 @@ def test_tabs_and_dark_theme(qtbot, db):
     theme.apply(QApplication.instance(), "dark")
     assert theme.tokens().name == "dark"
     theme.apply(QApplication.instance(), "light")
+
+
+def test_dashboard_navigation(qtbot, db):
+    from datetime import date
+
+    from scripts.seed_demo import seed
+
+    with db.session() as s:
+        seed(s, today=date.today())
+        s.commit()
+    window = make_window(qtbot, db)
+    window.ctx.show_dashboard.emit()
+    assert window.stack.currentWidget() is window.dashboard
+    assert window.sidebar.dashboard_button.isChecked()
+    assert window.dashboard.projects.topLevelItemCount() == 1
+    assert window.dashboard.s_open.value.text() == "6"
+    item = window.dashboard.projects.topLevelItem(0)
+    window.dashboard._open_project(item)
+    qtbot.wait(20)
+    assert window.stack.currentIndex() == 1
+    assert not window.sidebar.dashboard_button.isChecked()
+    assert window.sidebar.list.currentRow() == 0

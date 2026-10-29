@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMenu,
     QMessageBox,
+    QSizePolicy,
     QToolButton,
     QVBoxLayout,
 )
@@ -58,7 +59,21 @@ class Sidebar(QFrame):
         name = QLabel(APP_NAME)
         name.setObjectName("AppName")
         lay.addWidget(name)
-        lay.addSpacing(10)
+        lay.addSpacing(8)
+
+        self.dashboard_button = QToolButton()
+        self.dashboard_button.setObjectName("NavButton")
+        self.dashboard_button.setText("  Pregled")
+        self.dashboard_button.setIcon(icons.icon("dashboard"))
+        self.dashboard_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.dashboard_button.setCheckable(True)
+        self.dashboard_button.setToolTip("Pregled svih projekata (Ctrl+0)")
+        self.dashboard_button.clicked.connect(lambda: self.ctx.show_dashboard.emit())
+        self.dashboard_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        lay.addWidget(self.dashboard_button)
+        lay.addSpacing(8)
+        self.dashboard_mode = False
+        ctx.show_dashboard.connect(self._enter_dashboard)
 
         head = QHBoxLayout()
         title = QLabel("Projekti")
@@ -116,6 +131,10 @@ class Sidebar(QFrame):
         self.list.blockSignals(False)
 
         ids = [r[0] for r in rows]
+        if self.dashboard_mode:
+            if current not in ids:
+                self.ctx.project_id = ""
+            return
         if current in ids:
             self.list.setCurrentRow(ids.index(current))
         elif ids:
@@ -125,9 +144,27 @@ class Sidebar(QFrame):
             self.ctx.select_project("")
 
     def _current_changed(self, item: QListWidgetItem | None, _prev) -> None:
-        self.ctx.select_project(item.data(ROLE_ID) if item else "")
+        if item is None:
+            if not self.dashboard_mode:
+                self.ctx.select_project("")
+            return
+        self._leave_dashboard()
+        self.ctx.open_project(item.data(ROLE_ID))
+
+    def _enter_dashboard(self) -> None:
+        self.dashboard_mode = True
+        self.dashboard_button.setChecked(True)
+        self.list.blockSignals(True)
+        self.list.setCurrentRow(-1)
+        self.list.clearSelection()
+        self.list.blockSignals(False)
+
+    def _leave_dashboard(self) -> None:
+        self.dashboard_mode = False
+        self.dashboard_button.setChecked(False)
 
     def select(self, project_id: str) -> None:
+        self._leave_dashboard()
         for row in range(self.list.count()):
             if self.list.item(row).data(ROLE_ID) == project_id:
                 self.list.setCurrentRow(row)

@@ -185,6 +185,10 @@ class MainWindow(QMainWindow):
         tw.addWidget(self.tabs)
         page.addWidget(tabs_wrap, 1)
         self.stack.addWidget(project_page)
+        from app.ui.views.dashboard_view import DashboardView
+
+        self.dashboard = DashboardView(self.ctx)
+        self.stack.addWidget(self.dashboard)
         root.addWidget(self.stack, 1)
         self.setCentralWidget(central)
 
@@ -195,6 +199,7 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.timer_widget)
         self.ctx.message.connect(lambda m: self.statusBar().showMessage(m, 6000))
         self.ctx.project_changed.connect(self._project_changed)
+        self.ctx.show_dashboard.connect(lambda: self.stack.setCurrentWidget(self.dashboard))
         self.ctx.data_changed.connect(self.header.reload)
         self.ctx.open_task_requested.connect(self.open_task)
         theme.manager().changed.connect(self._theme_changed)
@@ -252,6 +257,7 @@ class MainWindow(QMainWindow):
         self._action(project_menu, "Obriši projekat…", None, self.sidebar.delete_current)
 
         view_menu = bar.addMenu("&Prikaz")
+        self._action(view_menu, "Pregled svih projekata", "Ctrl+0", self.ctx.show_dashboard.emit)
         for i, view in enumerate(self.views):
             self._action(
                 view_menu, view.title, f"Ctrl+{i + 1}", lambda i=i: self.tabs.setCurrentIndex(i)
@@ -278,6 +284,10 @@ class MainWindow(QMainWindow):
     # --- stanje ----------------------------------------------------------------------------------
 
     def _project_changed(self, pid: str) -> None:
+        if self.sidebar.dashboard_mode and pid:
+            self.sidebar.select(pid)
+        if self.sidebar.dashboard_mode:
+            return
         self.stack.setCurrentIndex(1 if pid else 0)
         self.header.reload()
 
