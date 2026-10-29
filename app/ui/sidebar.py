@@ -173,10 +173,25 @@ class Sidebar(QFrame):
     # --- akcije ----------------------------------------------------------------------------------
 
     def new_project(self) -> None:
-        dlg = ProjectDialog(parent=self.window())
+        from datetime import date
+
+        from app.services import templates as template_service
+
+        with self.ctx.session() as s:
+            infos = template_service.list_templates(s)
+        dlg = ProjectDialog(parent=self.window(), templates=infos)
         if dlg.exec():
             values = dlg.values()
-            project = self.ctx.run(lambda s: project_service.create(s, **values).id, self.window())
+            template_id = dlg.template_id()
+
+            def work(s):
+                p = project_service.create(s, **values)
+                if template_id:
+                    data = template_service.get_data(s, template_id)
+                    template_service.apply(s, p.id, data, values["start_date"] or date.today())
+                return p.id
+
+            project = self.ctx.run(work, self.window())
             if project:
                 self.ctx.select_project(project)
                 self.select(project)

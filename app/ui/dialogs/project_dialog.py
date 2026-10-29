@@ -2,19 +2,37 @@
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QComboBox, QLineEdit, QPlainTextEdit
 
 from app.db.models import Project, ProjectStatus
 from app.labels import PROJECT_COLORS, PROJECT_STATUS
+from app.services.templates import TemplateInfo
 from app.ui.dialogs.base import FormDialog
 from app.ui.widgets.fields import ColorPicker, OptionalDateField
 
 
 class ProjectDialog(FormDialog):
-    def __init__(self, project: Project | None = None, parent=None) -> None:
+    def __init__(
+        self,
+        project: Project | None = None,
+        parent=None,
+        templates: list[TemplateInfo] | None = None,
+    ) -> None:
         super().__init__("Izmena projekta" if project else "Novi projekat", parent)
+        self.template = None
+        if project is None and templates:
+            self.template = QComboBox()
+            self.template.addItem("Prazan projekat", None)
+            for info in templates:
+                kind = "" if info.builtin else "  (moj)"
+                self.template.addItem(f"{info.name}{kind}, {info.task_count} zadataka", info.id)
+                self.template.setItemData(
+                    self.template.count() - 1, info.description, Qt.ItemDataRole.ToolTipRole
+                )
 
         self.name = QLineEdit(project.name if project else "")
         self.name.setPlaceholderText("npr. Redizajn sajta za piceriju")
@@ -33,6 +51,9 @@ class ProjectDialog(FormDialog):
         self.description.setPlaceholderText("Cilj projekta, napomene…")
         self.description.setFixedHeight(90)
 
+        if self.template is not None:
+            self.form.addRow("Šablon", self.template)
+            self.template.currentIndexChanged.connect(self._template_changed)
         self.form.addRow("Naziv", self.name)
         self.form.addRow("Klijent", self.client)
         self.form.addRow("Boja", self.color)
@@ -41,6 +62,14 @@ class ProjectDialog(FormDialog):
         self.form.addRow("Kraj", self.end)
         self.form.addRow("Opis", self.description)
         self.name.setFocus()
+
+    def _template_changed(self) -> None:
+        # Šablon raspoređuje zadatke od početka projekta, pa početak mora da postoji.
+        if self.template.currentData() and self.start.value() is None:
+            self.start.set_value(date.today())
+
+    def template_id(self) -> str | None:
+        return self.template.currentData() if self.template is not None else None
 
     def validate(self) -> None:
         if not self.name.text().strip():

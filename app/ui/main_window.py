@@ -254,6 +254,9 @@ class MainWindow(QMainWindow):
         self._action(project_menu, "Arhiviraj / vrati", None, self.sidebar.toggle_archive_current)
         self._action(project_menu, "Podeli linkom…", "Ctrl+Shift+S", self.open_share)
         project_menu.addSeparator()
+        self._action(project_menu, "Sačuvaj kao šablon…", None, self.save_template)
+        self._action(project_menu, "Šabloni projekata…", None, self.manage_templates)
+        project_menu.addSeparator()
         self._action(project_menu, "Obriši projekat…", None, self.sidebar.delete_current)
 
         view_menu = bar.addMenu("&Prikaz")
@@ -373,6 +376,16 @@ class MainWindow(QMainWindow):
         from app.ui.dialogs.task_dialog import open_task
 
         open_task(self.ctx, task_id, self)
+
+    def save_template(self) -> None:
+        from app.ui.dialogs.templates_dialog import save_current_as_template
+
+        save_current_as_template(self.ctx, self)
+
+    def manage_templates(self) -> None:
+        from app.ui.dialogs.templates_dialog import TemplatesDialog
+
+        TemplatesDialog(self.ctx, self).exec()
 
     def open_share(self) -> None:
         if not self.ctx.project_id:
