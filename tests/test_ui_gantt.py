@@ -12,7 +12,6 @@ from PySide6.QtWidgets import QApplication
 from app.services import dependencies as dep_service
 from app.services import milestones as ms_service
 from app.services import tasks as task_service
-from app.ui import theme
 from app.ui.main_window import MainWindow
 from app.ui.views.gantt.gantt_view import GanttView
 from app.ui.views.gantt.items import TaskBarItem
@@ -24,7 +23,6 @@ def gantt(qtbot, db):
     with db.session() as s:
         seed(s, today=date.today())
         s.commit()
-    theme.apply(QApplication.instance(), "light")
     w = MainWindow(db)
     w.resize(1500, 900)
     qtbot.addWidget(w)

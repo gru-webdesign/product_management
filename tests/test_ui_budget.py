@@ -3,10 +3,8 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
-from PySide6.QtWidgets import QApplication
 
 from app.services import budget as budget_service
-from app.ui import theme
 from app.ui.dialogs.budget_dialog import BudgetDialog
 from app.ui.dialogs.cost_dialog import MoneyEntryDialog
 from app.ui.main_window import MainWindow
@@ -19,7 +17,6 @@ def budget(qtbot, db):
     with db.session() as s:
         seed(s, today=date.today())
         s.commit()
-    theme.apply(QApplication.instance(), "light")
     w = MainWindow(db)
     qtbot.addWidget(w)
     w.show()

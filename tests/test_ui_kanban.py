@@ -7,7 +7,6 @@ from PySide6.QtWidgets import QApplication
 
 from app.db.models import TaskStatus
 from app.services import tasks as task_service
-from app.ui import theme
 from app.ui.main_window import MainWindow
 from app.ui.views.kanban_view import ROLE_ID, KanbanView
 from scripts.seed_demo import seed
@@ -18,7 +17,6 @@ def kanban(qtbot, db):
     with db.session() as s:
         seed(s, today=date.today())
         s.commit()
-    theme.apply(QApplication.instance(), "light")
     w = MainWindow(db)
     qtbot.addWidget(w)
     w.show()

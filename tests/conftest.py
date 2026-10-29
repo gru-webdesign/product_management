@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ["ETAPA_TEST"] = "1"
 
 import pytest  # noqa: E402
 
@@ -40,10 +41,13 @@ def _memory_keyring(monkeypatch):
 
 
 @pytest.fixture(autouse=True, scope="session")
-def _serbian_locale():
+def _serbian_locale(qapp):
     from app.main import set_locale
+    from app.ui import theme
 
     set_locale()
+    theme.load_fonts(qapp)
+    theme.apply(qapp, "light")  # jednom po sesiji: svaka primena restilizuje sve prozore
 
 
 @pytest.fixture

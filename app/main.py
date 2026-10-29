@@ -39,11 +39,17 @@ def set_locale() -> None:
 
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    logging.getLogger("alembic").setLevel(logging.WARNING)
     app = QApplication(sys.argv)
     set_locale()
     app.setApplicationName(APP_NAME)
     app.setApplicationVersion(__version__)
     app.setOrganizationName(APP_NAME)
+    from pathlib import Path
+
+    from PySide6.QtGui import QIcon
+
+    app.setWindowIcon(QIcon(str(Path(__file__).parent / "resources" / "icons" / "app.png")))
 
     try:
         db = bootstrap()
@@ -61,7 +67,10 @@ def main() -> int:
     window.show()
     from PySide6.QtCore import QTimer
 
-    QTimer.singleShot(1500, window.sync_comments_in_background)
+    if "--smoke-test" in sys.argv:  # provera gotovog .exe-a: pokreni, otvori prozor, zatvori
+        QTimer.singleShot(1500, app.quit)
+    else:
+        QTimer.singleShot(1500, window.sync_comments_in_background)
     code = app.exec()
     from app.ui import background
 

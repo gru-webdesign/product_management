@@ -33,7 +33,6 @@ def setup(qtbot, db, monkeypatch):
 
     monkeypatch.setattr(sharing, "make_client", fake_make_client)
     monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
-    theme.apply(QApplication.instance(), "light")
     w = MainWindow(db)
     qtbot.addWidget(w)
     w.show()
@@ -162,7 +161,6 @@ def test_settings_save(setup, qtbot):
         assert sharing.worker_url(s) == "https://etapa.me.workers.dev"
         assert sharing.configured(s)
     assert theme.tokens().name == "dark"
-    theme.apply(QApplication.instance(), "light")
 
 
 def test_settings_connection_test(setup, qtbot, monkeypatch):

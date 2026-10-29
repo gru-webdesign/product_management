@@ -494,6 +494,16 @@ class GanttChart(QGraphicsView):
                     format_money(row.cost_minor) if row.cost_minor else "—",
                 )
 
+        if not self.rows:
+            p.setFont(base)
+            p.setPen(QColor(t.faint))
+            p.drawText(
+                QRectF(lw + 24, HEADER_H + ROW_H + 24, 520, 60),
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
+                "Nema zadataka za prikaz.\nDodaj zadatak sa datumima (Ctrl+N) i pojaviće "
+                "se ovde kao traka.",
+            )
+
         # zaglavlje leve kolone
         p.fillRect(QRectF(0, 0, lw, HEADER_H), QColor(t.surface))
         p.setFont(small)

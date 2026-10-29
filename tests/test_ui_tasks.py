@@ -3,11 +3,9 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 import pytest
-from PySide6.QtWidgets import QApplication
 
 from app.db.models import Priority, TaskStatus
 from app.services import tasks as task_service
-from app.ui import theme
 from app.ui.dialogs.task_dialog import TaskDialog
 from app.ui.main_window import MainWindow
 from app.ui.views.list_view import C_TITLE, ROLE_ID, ListView
@@ -19,7 +17,6 @@ def window(qtbot, db):
     with db.session() as s:
         seed(s, today=date.today())
         s.commit()
-    theme.apply(QApplication.instance(), "light")
     w = MainWindow(db)
     qtbot.addWidget(w)
     w.show()

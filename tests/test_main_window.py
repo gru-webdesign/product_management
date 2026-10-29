@@ -9,7 +9,6 @@ from app.ui.main_window import MainWindow
 
 
 def make_window(qtbot, db) -> MainWindow:
-    theme.apply(QApplication.instance(), "light")
     window = MainWindow(db)
     qtbot.addWidget(window)
     window.show()

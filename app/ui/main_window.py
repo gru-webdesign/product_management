@@ -129,6 +129,10 @@ class MainWindow(QMainWindow):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
+        with db.session() as s:
+            last = get_setting(s, "last_project_id")
+            if last and project_service.get(s, last) is not None:
+                self.ctx.project_id = last
         self.sidebar = Sidebar(self.ctx)
         self.sidebar.settings_requested.connect(self.open_settings)
         root.addWidget(self.sidebar)
@@ -178,6 +182,7 @@ class MainWindow(QMainWindow):
         self.ctx.data_changed.connect(self._schedule_auto_publish)
         self.ctx.project_changed.connect(lambda _p: self._update_share_badge())
         self._update_share_badge()
+        self._restore_window()
 
     # --- sastavljanje ----------------------------------------------------------------------------
 
@@ -231,6 +236,7 @@ class MainWindow(QMainWindow):
             self._action(theme_menu, label, None, lambda m=mode: self.set_theme(m))
 
         help_menu = bar.addMenu("Po&moć")
+        self._action(help_menu, "Prečice na tastaturi", "F1", self.shortcuts)
         self._action(help_menu, f"O programu {APP_NAME}", None, self.about)
 
     def _action(self, menu, text, shortcut, slot) -> QAction:
@@ -255,6 +261,63 @@ class MainWindow(QMainWindow):
 
     def current_view(self) -> ProjectView:
         return self.views[self.tabs.currentIndex()]
+
+    # --- pamćenje stanja prozora ----------------------------------------------------------------
+
+    def _restore_window(self) -> None:
+        import os
+
+        from PySide6.QtCore import QSettings
+
+        if os.environ.get("ETAPA_TEST"):
+            return
+        qs = QSettings(APP_NAME, APP_NAME)
+        geometry = qs.value("window/geometry")
+        if geometry is not None:
+            self.restoreGeometry(geometry)
+        tab = qs.value("window/tab", 0)
+        try:
+            self.tabs.setCurrentIndex(int(tab))
+        except (TypeError, ValueError):
+            pass
+
+    def closeEvent(self, event) -> None:
+        from PySide6.QtCore import QSettings
+
+        from app.services.defaults import set_setting
+
+        qs = QSettings(APP_NAME, APP_NAME)
+        qs.setValue("window/geometry", self.saveGeometry())
+        qs.setValue("window/tab", self.tabs.currentIndex())
+        pid = self.ctx.project_id
+        with self.db.session() as s:
+            set_setting(s, "last_project_id", pid)
+            s.commit()
+        super().closeEvent(event)
+
+    def shortcuts(self) -> None:
+        from PySide6.QtWidgets import QMessageBox
+
+        rows = [
+            ("Ctrl+N", "Novi zadatak"),
+            ("Ctrl+Shift+N", "Novi projekat"),
+            ("Ctrl+F", "Pretraga"),
+            ("Ctrl+1 … Ctrl+4", "Lista, Kanban, Gant, Budžet"),
+            ("F2 / Enter", "Otvori izabrani zadatak (Lista)"),
+            ("Delete", "Obriši izabrano (Lista, zavisnost na Gantu)"),
+            ("Ctrl+točkić", "Zum na Gantu"),
+            ("Shift+točkić", "Skrol levo-desno na Gantu"),
+            ("Ctrl+E", "Izvoz u CSV"),
+            ("Ctrl+Shift+S", "Podeli linkom"),
+            ("Ctrl+,", "Podešavanja"),
+            ("Ctrl+Q", "Izlaz"),
+        ]
+        html = (
+            "<table cellpadding='4'>"
+            + "".join(f"<tr><td><b>{k}</b></td><td>{v}</td></tr>" for k, v in rows)
+            + "</table>"
+        )
+        QMessageBox.information(self, "Prečice na tastaturi", html)
 
     # --- akcije ----------------------------------------------------------------------------------
 
