@@ -7,13 +7,13 @@ u jednom fajlu na tvom računaru.
 
 ## Pokretanje iz koda (Windows)
 
-Potrebno: [Python 3.12+](https://www.python.org/downloads/) (pri instalaciji označi
+Potrebno: [Python 3.12 ili noviji](https://www.python.org/downloads/) (pri instalaciji označi
 **Add python.exe to PATH**), Git i VS Code.
 
 ```powershell
 git clone https://github.com/gru-webdesign/product_management.git
 cd product_management
-py -3.12 -m venv .venv
+py -3 -m venv .venv
 .venv\Scripts\activate
 pip install -e ".[dev]"
 python -m app.main

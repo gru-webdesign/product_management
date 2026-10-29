@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
+
+import app.db.base  # noqa: F401  (UTCDateTime u autogenerisanim migracijama)
 ${imports if imports else ""}
 
 revision = ${repr(up_revision)}

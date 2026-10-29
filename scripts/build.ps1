@@ -17,7 +17,7 @@ Step "Etapa $version"
 
 if (-not (Test-Path ".venv\Scripts\python.exe")) {
     Step "Pravim virtuelno okruženje (.venv)"
-    py -3.12 -m venv .venv
+    py -3 -m venv .venv
 }
 $py = Join-Path $root ".venv\Scripts\python.exe"
 

@@ -6,7 +6,7 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sqlalchemy import DateTime, MetaData, String, create_engine, event
+from sqlalchemy import DateTime, MetaData, String, TypeDecorator, create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
@@ -32,6 +32,29 @@ def new_id() -> str:
     return str(uuid.uuid4())
 
 
+class UTCDateTime(TypeDecorator):
+    """Vreme se u bazi čuva kao UTC, a čita se nazad sa oznakom zone (UTC).
+
+    SQLite ne pamti vremensku zonu, pa bi se bez ovoga vreme čitalo kao „lokalno" i
+    prikazivalo pomereno za razliku od UTC-a (u Beogradu sat ili dva).
+    """
+
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=UTC)
+        return value.astimezone(UTC).replace(tzinfo=None)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
+
 class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING)
 
@@ -41,10 +64,8 @@ class IdMixin:
 
 
 class TimestampMixin:
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
 
 
 @event.listens_for(Engine, "connect")

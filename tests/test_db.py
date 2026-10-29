@@ -105,3 +105,21 @@ def test_task_constraints(session):
 def test_upgrade_is_idempotent(db):
     db.upgrade()
     db.upgrade()
+
+
+def test_datetimes_come_back_as_utc_aware(session):
+    """SQLite ne čuva zonu; bez UTCDateTime vreme bi se prikazalo pomereno za UTC razliku."""
+    from datetime import UTC, datetime, timedelta, timezone
+
+    p = Project(name="Vreme")
+    session.add(p)
+    session.commit()
+    session.expire_all()
+    loaded = session.get(Project, p.id)
+    assert loaded.created_at.tzinfo is not None
+    assert abs(loaded.created_at - datetime.now(UTC)) < timedelta(minutes=1)
+    belgrade = timezone(timedelta(hours=1))
+    loaded.updated_at = datetime(2026, 11, 2, 12, 0, tzinfo=belgrade)
+    session.commit()
+    session.expire_all()
+    assert session.get(Project, p.id).updated_at == datetime(2026, 11, 2, 11, 0, tzinfo=UTC)

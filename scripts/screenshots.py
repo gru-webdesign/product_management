@@ -75,6 +75,41 @@ def main() -> int:
         dlg.grab().save(str(path))
         dlg.close()
         print(path)
+    from app.ui.dialogs.budget_dialog import BudgetDialog
+    from app.ui.dialogs.cost_dialog import MoneyEntryDialog
+    from app.ui.dialogs.project_dialog import ProjectDialog
+    from app.ui.dialogs.settings_dialog import SettingsDialog
+    from app.ui.dialogs.share_dialog import ShareDialog
+
+    dialogs = {
+        "share": lambda: ShareDialog(window.ctx, window),
+        "settings": lambda: SettingsDialog(window.ctx, window),
+        "settings-share": lambda: SettingsDialog(window.ctx, window, tab="share"),
+        "cost": lambda: MoneyEntryDialog(window.ctx, "cost", None, window),
+        "budget": lambda: BudgetDialog(window.ctx, window),
+        "project": lambda: ProjectDialog(None, window),
+    }
+    for name, make in dialogs.items():
+        dlg = make()
+        dlg.show()
+        for _ in range(5):
+            app.processEvents()
+        path = out / f"dialog-{name}{suffix}.png"
+        dlg.grab().save(str(path))
+        dlg.close()
+        print(path)
+
+    # prazan ekran (nema projekata)
+    empty_db = bootstrap(get_paths(Path(tempfile.mkdtemp(prefix="etapa-empty-"))))
+    empty = MainWindow(empty_db)
+    empty.resize(1100, 700)
+    empty.show()
+    for _ in range(5):
+        app.processEvents()
+    empty.grab().save(str(out / f"0-empty{suffix}.png"))
+    print(out / f"0-empty{suffix}.png")
+    empty.close()
+    empty_db.dispose()
     db.dispose()
     return 0
 

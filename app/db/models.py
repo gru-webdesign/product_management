@@ -18,7 +18,6 @@ from sqlalchemy import (
     CheckConstraint,
     Column,
     Date,
-    DateTime,
     Enum,
     Float,
     ForeignKey,
@@ -31,7 +30,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, IdMixin, TimestampMixin, utcnow
+from app.db.base import Base, IdMixin, TimestampMixin, UTCDateTime, utcnow
 
 
 def _enum(cls: type[StrEnum]) -> Enum:
@@ -86,9 +85,7 @@ class Setting(Base):
 
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[str] = mapped_column(Text, default="")
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
 
 
 # --- Projekti i zadaci ---------------------------------------------------------------------------
@@ -352,7 +349,7 @@ class ShareLink(IdMixin, TimestampMixin, Base):
     show_gantt: Mapped[bool] = mapped_column(Boolean, default=True)
     show_list: Mapped[bool] = mapped_column(Boolean, default=True)
     auto_update: Mapped[bool] = mapped_column(Boolean, default=False)
-    last_published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_published_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
 
     project: Mapped[Project] = relationship(back_populates="share_links")
@@ -375,8 +372,8 @@ class RemoteComment(IdMixin, TimestampMixin, Base):
     remote_id: Mapped[str] = mapped_column(String(64), unique=True)
     author_name: Mapped[str] = mapped_column(String(120), default="")
     text: Mapped[str] = mapped_column(Text)
-    posted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    posted_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    received_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
     read: Mapped[bool] = mapped_column(Boolean, default=False)
     resolved: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -390,9 +387,7 @@ class RemoteComment(IdMixin, TimestampMixin, Base):
 class ActivityLog(IdMixin, Base):
     __tablename__ = "activity_log"
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, index=True
-    )
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, index=True)
     entity: Mapped[str] = mapped_column(String(40))
     entity_id: Mapped[str] = mapped_column(String(36), index=True)
     project_id: Mapped[str | None] = mapped_column(String(36), index=True)

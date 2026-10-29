@@ -212,6 +212,12 @@ QPushButton[primary="true"] {{ background: {t.accent}; color: {t.accent_text};
     border: 1px solid {t.accent}; font-weight: 600; }}
 QPushButton[primary="true"]:hover {{ background: {t.accent_hover}; }}
 QPushButton[danger="true"] {{ color: {t.danger}; }}
+QPushButton[primary="true"]:disabled {{ background: {t.border}; color: {t.faint};
+    border-color: {t.border}; }}
+QPushButton[danger="true"]:disabled {{ color: {t.faint}; }}
+QPushButton[link="true"] {{ background: transparent; border: none; color: {t.accent};
+    padding: 0; text-align: left; }}
+QPushButton[link="true"]:hover {{ text-decoration: underline; background: transparent; }}
 QPushButton[flat="true"] {{ background: transparent; border: none; }}
 QPushButton[flat="true"]:hover {{ background: {t.border}; }}
 QToolButton {{ background: transparent; border: none; border-radius: 6px; padding: 4px 6px; }}

@@ -72,7 +72,7 @@ tests/                 94 testa (servisi + UI preko pytest-qt, bez prozora)
 ## Komande
 
 ```powershell
-py -3.12 -m venv .venv
+py -3 -m venv .venv
 .venv\Scripts\activate
 pip install -e ".[dev]"
 python -m app.main                                     # prava baza
