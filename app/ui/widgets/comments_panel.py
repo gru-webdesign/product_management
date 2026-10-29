@@ -98,13 +98,13 @@ class CommentsPanel(QWidget):
         bold = QFont(self.font())
         bold.setWeight(QFont.Weight.DemiBold)
         for cid, author, when, text, task, resolved, read in rows:
-            head = f"{author}   ·   {when.astimezone().strftime('%d.%m.%Y. %H:%M')}"
+            head = f"{author}, {when.astimezone().strftime('%d.%m.%Y. %H:%M')}"
             if task and not self.task_id:
-                head += f"   ·   {task}"
+                head += f"  (zadatak: {task})"
             if resolved:
-                head += "   ·   rešeno"
+                head += "  rešeno"
             elif not read:
-                head += "   ·   novo"
+                head += "  novo"
             item = QListWidgetItem(f"{head}\n{text}")
             item.setData(ROLE_ID, cid)
             if resolved:

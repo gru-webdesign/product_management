@@ -13,7 +13,8 @@ from PySide6.QtGui import QColor, QFont, QFontDatabase, QGuiApplication, QPalett
 from PySide6.QtWidgets import QApplication
 
 FONTS_DIR = Path(__file__).resolve().parents[1] / "resources" / "fonts"
-FONT_FAMILY = "Inter"
+FONT_FAMILY = "Geist"
+MONO_FAMILY = "Geist Mono"
 
 
 @dataclass(frozen=True)
@@ -45,54 +46,54 @@ class Tokens:
 
 LIGHT = Tokens(
     name="light",
-    bg="#FCFCFD",
+    bg="#FAFAFB",
     surface="#FFFFFF",
-    surface_alt="#F9F9FB",
-    sidebar="#F5F5F7",
-    border="#E4E4E9",
-    border_strong="#CDCED6",
-    text="#1C2024",
-    muted="#60646C",
-    faint="#8B8D98",
-    accent="#5B5BD6",
-    accent_hover="#5151CD",
-    accent_soft="#EDEDFC",
+    surface_alt="#F6F6F8",
+    sidebar="#F3F3F5",
+    border="#E4E4E8",
+    border_strong="#D0D0D7",
+    text="#18181C",
+    muted="#5E5E68",
+    faint="#8A8A94",
+    accent="#2F55D4",
+    accent_hover="#2648C0",
+    accent_soft="#EAEFFD",
     accent_text="#FFFFFF",
-    danger="#DC3E42",
-    danger_soft="#FEEBEC",
-    warning="#E2730B",
-    warning_soft="#FFEFD6",
-    success="#2B9A66",
-    success_soft="#E6F6EB",
+    danger="#D23434",
+    danger_soft="#FCECEC",
+    warning="#B8620A",
+    warning_soft="#FCF0E1",
+    success="#22844C",
+    success_soft="#E6F4EB",
     weekend="#F5F5F7",
-    today="#E5484D",
+    today="#D23434",
     grid="#EEEEF1",
 )
 
 DARK = Tokens(
     name="dark",
     bg="#111113",
-    surface="#18191B",
-    surface_alt="#1D1E21",
+    surface="#18181B",
+    surface_alt="#1D1D21",
     sidebar="#141416",
-    border="#2B2D31",
-    border_strong="#3C3F44",
-    text="#EDEEF0",
-    muted="#B0B4BA",
-    faint="#777B84",
-    accent="#6E6ADE",
-    accent_hover="#7D79E8",
-    accent_soft="#232350",
-    accent_text="#FFFFFF",
-    danger="#FF6369",
-    danger_soft="#3B1219",
-    warning="#FFA057",
-    warning_soft="#331E0B",
-    success="#3DD68C",
-    success_soft="#132D21",
-    weekend="#151618",
-    today="#FF6369",
-    grid="#222326",
+    border="#2A2A2F",
+    border_strong="#3A3A41",
+    text="#EDEDEF",
+    muted="#A8A8B1",
+    faint="#74747E",
+    accent="#6E8EF5",
+    accent_hover="#829EF7",
+    accent_soft="#1C2544",
+    accent_text="#0E1330",
+    danger="#F06666",
+    danger_soft="#3A1618",
+    warning="#F0A14E",
+    warning_soft="#33230F",
+    success="#4CC38A",
+    success_soft="#13291D",
+    weekend="#151517",
+    today="#F06666",
+    grid="#222226",
 )
 
 
@@ -128,7 +129,7 @@ def tokens() -> Tokens:
 
 
 def load_fonts(app: QApplication) -> None:
-    for file in sorted(FONTS_DIR.glob("*.otf")):
+    for file in sorted(FONTS_DIR.glob("*.ttf")):
         QFontDatabase.addApplicationFont(str(file))
     font = QFont(FONT_FAMILY if FONT_FAMILY in QFontDatabase.families() else "Segoe UI")
     font.setPointSizeF(9.75)
@@ -179,6 +180,8 @@ def _palette(t: Tokens) -> QPalette:
     return p
 
 
+# Uglovi: kontrole (dugmad, polja) 6px, površine (kartice, tabele, kolone) 10px,
+# ugnježdene kartice 8px, bedževi pun radijus. Jedan akcenat (kobalt) za ceo UI.
 def stylesheet(t: Tokens) -> str:
     return f"""
 QWidget {{ color: {t.text}; }}
@@ -187,8 +190,7 @@ QToolTip {{ background: {t.surface}; color: {t.text}; border: 1px solid {t.borde
     padding: 4px 6px; }}
 
 #Sidebar {{ background: {t.sidebar}; border-right: 1px solid {t.border}; }}
-#SidebarTitle {{ font-size: 11px; font-weight: 600; color: {t.faint};
-    letter-spacing: 0.6px; }}
+#SidebarTitle {{ font-size: 12px; font-weight: 500; color: {t.muted}; }}
 #AppName {{ font-size: 16px; font-weight: 600; }}
 #ProjectList {{ background: transparent; border: none; outline: none; }}
 #ProjectList::item {{ padding: 7px 8px; border-radius: 6px; margin: 1px 0; }}
@@ -196,8 +198,10 @@ QToolTip {{ background: {t.surface}; color: {t.text}; border: 1px solid {t.borde
 #ProjectList::item:selected {{ background: {t.accent_soft}; color: {t.text}; }}
 
 #Header {{ background: {t.bg}; border-bottom: 1px solid {t.border}; }}
-#ProjectTitle {{ font-size: 18px; font-weight: 600; }}
+#ProjectTitle {{ font-size: 20px; font-weight: 600; letter-spacing: -0.2px; }}
 #ProjectMeta, .muted, QLabel[muted="true"] {{ color: {t.muted}; }}
+#StatusChip {{ background: {t.accent_soft}; color: {t.accent}; border-radius: 9px;
+    padding: 1px 9px; font-weight: 500; }}
 QLabel[faint="true"] {{ color: {t.faint}; }}
 QLabel[heading="true"] {{ font-size: 13px; font-weight: 600; }}
 #EmptyTitle {{ font-size: 17px; font-weight: 600; }}
@@ -295,8 +299,8 @@ QGroupBox::title {{ subcontrol-origin: margin; left: 10px; padding: 0 4px; }}
     border-radius: 8px; }}
 #Banner[level="over"] {{ background: {t.danger_soft}; border: 1px solid {t.danger};
     border-radius: 8px; }}
-#KpiValue {{ font-size: 18px; font-weight: 600; }}
-#KpiLabel {{ color: {t.muted}; font-size: 11px; }}
+#KpiValue {{ font-size: 19px; font-weight: 500; font-family: "Geist Mono", Consolas; }}
+#KpiLabel {{ color: {t.muted}; font-size: 12px; }}
 """
 
 
@@ -306,6 +310,15 @@ def _icon(name: str) -> str:
 
 def _chevron(t: Tokens) -> str:
     return _icon(f"chevron-down-{t.name}")
+
+
+def mono(base: QFont | None = None, delta: float = 0.0) -> QFont:
+    """Geist Mono za iznose, datume i brojeve koji stoje u kolonama."""
+    f = QFont(base) if base is not None else QFont()
+    f.setFamily(MONO_FAMILY if MONO_FAMILY in QFontDatabase.families() else "Consolas")
+    if delta:
+        f.setPointSizeF(max(7.0, f.pointSizeF() + delta))
+    return f
 
 
 def repolish(widget) -> None:

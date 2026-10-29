@@ -91,7 +91,7 @@ class MoneyEntryDialog(FormDialog):
             if entry:
                 self.category.setCurrentIndex(max(0, self.category.findData(entry.category_id)))
             self.task = QComboBox()
-            self.task.addItem("— bez zadatka", None)
+            self.task.addItem("Bez zadatka", None)
             for tid, name in tasks:
                 self.task.addItem(name, tid)
             wanted = entry.task_id if entry else task_id

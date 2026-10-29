@@ -12,10 +12,10 @@ TASK_STATUS = {
 }
 
 TASK_STATUS_COLOR = {
-    TaskStatus.TODO: "#8B8D98",
-    TaskStatus.IN_PROGRESS: "#3E63DD",
-    TaskStatus.REVIEW: "#F76B15",
-    TaskStatus.DONE: "#30A46C",
+    TaskStatus.TODO: "#7C7C86",
+    TaskStatus.IN_PROGRESS: "#2F55D4",
+    TaskStatus.REVIEW: "#B8620A",
+    TaskStatus.DONE: "#22844C",
 }
 
 PRIORITY = {
@@ -26,10 +26,10 @@ PRIORITY = {
 }
 
 PRIORITY_COLOR = {
-    Priority.LOW: "#8B8D98",
-    Priority.MEDIUM: "#3E63DD",
-    Priority.HIGH: "#F76B15",
-    Priority.URGENT: "#E5484D",
+    Priority.LOW: "#7C7C86",
+    Priority.MEDIUM: "#5E5E68",
+    Priority.HIGH: "#B8620A",
+    Priority.URGENT: "#D23434",
 }
 
 PROJECT_STATUS = {
@@ -66,23 +66,22 @@ FIELD = {
 }
 
 PROJECT_COLORS = [
-    "#5B5BD6",
-    "#3E63DD",
-    "#0090FF",
-    "#12A594",
-    "#30A46C",
-    "#F76B15",
-    "#E5484D",
-    "#D6409F",
-    "#8E4EC6",
-    "#8B8D98",
+    "#2F55D4",
+    "#0E7C86",
+    "#22844C",
+    "#8A7A12",
+    "#B8620A",
+    "#C2410C",
+    "#BE3455",
+    "#7A5AC0",
+    "#5E5E68",
 ]
 
 
 def display_value(field: str, value) -> str:
     """Čitljiv prikaz vrednosti u istoriji izmena."""
     if value is None or value == "":
-        return "—"
+        return "prazno"
     if isinstance(value, TaskStatus):
         return TASK_STATUS[value]
     if isinstance(value, Priority):

@@ -73,7 +73,8 @@ class GanttView(ProjectView):
         self.show_done.toggled.connect(lambda _c: self.refresh())
         bar.addWidget(self.show_done)
         bar.addStretch(1)
-        hint = QLabel("Prevuci traku · ivica = trajanje · kružić → zavisnost · Ctrl+točkić = zum")
+        hint = QLabel("Prevuci traku ili njenu ivicu. Kružić desno pravi zavisnost.")
+        hint.setToolTip("Ctrl+točkić menja zum, Shift+točkić skroluje levo-desno.")
         hint.setProperty("faint", True)
         bar.addWidget(hint)
         lay.addLayout(bar)
@@ -218,7 +219,7 @@ class GanttView(ProjectView):
                 ),
             )
         shift = menu.addMenu("Pomeri")
-        for days, label in ((-7, "−1 nedelja"), (-1, "−1 dan"), (1, "+1 dan"), (7, "+1 nedelja")):
+        for days, label in ((-7, "-1 nedelja"), (-1, "-1 dan"), (1, "+1 dan"), (7, "+1 nedelja")):
             shift.addAction(
                 label,
                 lambda d=days: self.ctx.run(

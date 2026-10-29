@@ -45,9 +45,9 @@ class Kpi(QFrame):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(16, 12, 16, 12)
         lay.setSpacing(2)
-        self.label = QLabel(label.upper())
+        self.label = QLabel(label)
         self.label.setObjectName("KpiLabel")
-        self.value = QLabel("—")
+        self.value = QLabel("-")
         self.value.setObjectName("KpiValue")
         self.sub = QLabel("")
         self.sub.setProperty("muted", True)
@@ -79,7 +79,7 @@ class Banner(QFrame):
         level = "over" if any(lvl == "over" for lvl, _ in warnings) else "warn"
         self.setProperty("level", level)
         theme.repolish(self)
-        self.text.setText("\n".join(f"•  {msg}" for _, msg in warnings))
+        self.text.setText("\n".join(f"{msg}" for _, msg in warnings))
         self.show()
 
 
@@ -191,7 +191,7 @@ class BudgetView(ProjectView):
         bar = QHBoxLayout()
         self.add_cost_button = QPushButton("Trošak")
         self.add_cost_button.setProperty("primary", True)
-        self.add_cost_button.setIcon(icons.icon("plus", "#FFFFFF"))
+        self.add_cost_button.setIcon(icons.icon("plus", theme.tokens().accent_text))
         self.add_cost_button.clicked.connect(lambda: self._edit("cost"))
         add_income = QPushButton("Prihod")
         add_income.setIcon(icons.icon("plus"))
@@ -298,7 +298,7 @@ class BudgetView(ProjectView):
                 (
                     c.id,
                     c.date,
-                    c.vendor or c.note or "—",
+                    c.vendor or c.note or "Bez opisa",
                     c.category.name,
                     c.category.color,
                     c.task.title if c.task else "",
@@ -312,7 +312,7 @@ class BudgetView(ProjectView):
                 (
                     i.id,
                     i.date,
-                    i.description or "—",
+                    i.description or "Bez opisa",
                     i.amount_minor,
                     i.currency,
                     i.amount_base_minor,
@@ -333,7 +333,7 @@ class BudgetView(ProjectView):
             state_color,
         )
         self.k_left.set(
-            fm(summ.remaining) if summ.planned else "—",
+            fm(summ.remaining) if summ.planned else "-",
             "prekoračeno" if summ.remaining < 0 else "",
             t.danger if summ.remaining < 0 else None,
         )
@@ -351,9 +351,9 @@ class BudgetView(ProjectView):
             item = QTreeWidgetItem(
                 [
                     line.name,
-                    fm(line.planned) if line.planned else "—",
+                    fm(line.planned) if line.planned else "nije planirano",
                     fm(line.spent),
-                    fm(line.remaining) if line.planned else "—",
+                    fm(line.remaining) if line.planned else "",
                     "",
                 ]
             )
@@ -371,9 +371,13 @@ class BudgetView(ProjectView):
                 item.setForeground(2, QColor(t.warning))
             if line.remaining < 0 and line.planned:
                 item.setForeground(3, QColor(t.danger))
+            for col in (1, 2, 3):
+                item.setFont(col, theme.mono(self.categories.font(), -0.5))
             self.categories.addTopLevelItem(item)
         if not summ.lines:
-            empty = QTreeWidgetItem(["Još nema budžeta ni troškova — „Uredi budžet“ ili „Trošak“."])
+            empty = QTreeWidgetItem(
+                ["Još nema budžeta ni troškova. Dodaj ih dugmetom „Uredi budžet“ ili „Trošak“."]  # noqa: E501
+            )
             empty.setForeground(0, QColor(t.faint))
             empty.setFlags(Qt.ItemFlag.NoItemFlags)
             self.categories.addTopLevelItem(empty)
@@ -399,6 +403,8 @@ class BudgetView(ProjectView):
                 item.setTextAlignment(col, RIGHT)
             if cur == base:
                 item.setForeground(4, QColor(t.faint))
+            for col in (0, 4, 5):
+                item.setFont(col, theme.mono(self.costs.font(), -0.5))
             self.costs.addTopLevelItem(item)
         self.incomes.clear()
         for iid, d, desc, amount, cur, base_amount in income_rows:
@@ -408,6 +414,8 @@ class BudgetView(ProjectView):
             item.setData(0, ROLE_ID, iid)
             for col in (2, 3):
                 item.setTextAlignment(col, RIGHT)
+            for col in (0, 2, 3):
+                item.setFont(col, theme.mono(self.incomes.font(), -0.5))
             self.incomes.addTopLevelItem(item)
         self.entries.setTabText(0, f"Troškovi ({len(cost_rows)})")
         self.entries.setTabText(1, f"Prihodi ({len(income_rows)})")

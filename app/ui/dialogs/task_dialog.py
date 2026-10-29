@@ -46,7 +46,7 @@ def _hours_spin() -> QDoubleSpinBox:
     spin.setDecimals(1)
     spin.setSingleStep(0.5)
     spin.setSuffix(" h")
-    spin.setSpecialValueText("—")
+    spin.setSpecialValueText("-")
     return spin
 
 
@@ -217,7 +217,7 @@ class TaskDialog(QDialog):
         form.addRow("Tagovi", self.tags)
 
         self.parent_combo = QComboBox()
-        self.parent_combo.addItem("— nema (glavni zadatak)", None)
+        self.parent_combo.addItem("Nema (glavni zadatak)", None)
         for pid, label in self._parents:
             self.parent_combo.addItem(label, pid)
         wanted = d.get("parent_id", defaults.get("parent_id"))
@@ -323,7 +323,7 @@ class TaskDialog(QDialog):
                 elif h.field == "dependency":
                     text = (
                         f"Dodata zavisnost: čeka na „{h.new_value}“"
-                        if h.new_value != "—"
+                        if h.new_value != "prazno"
                         else f"Uklonjena zavisnost od „{h.old_value}“"
                     )
                 else:

@@ -6,19 +6,19 @@
 <meta name="robots" content="noindex, nofollow">
 <title>{{ data.project.name }} · pregled projekta</title>
 <style>
-:root{--bg:#fcfcfd;--surface:#fff;--alt:#f5f5f7;--border:#e4e4e9;--strong:#cdced6;--text:#1c2024;
---muted:#60646c;--faint:#8b8d98;--accent:#5b5bd6;--soft:#ededfc;--danger:#dc3e42;--warn:#e2730b;
+:root{--bg:#fafafb;--surface:#fff;--alt:#f6f6f8;--border:#e4e4e9;--strong:#cdced6;--text:#1c2024;
+--muted:#60646c;--faint:#8b8d98;--accent:#2f55d4;--soft:#eaeffd;--danger:#dc3e42;--warn:#e2730b;
 --ok:#2b9a66;--weekend:#f5f5f7;--grid:#eeeef1;--today:#e5484d}
 @media (prefers-color-scheme:dark){:root{--bg:#111113;--surface:#18191b;--alt:#1d1e21;--border:#2b2d31;
---strong:#3c3f44;--text:#edeef0;--muted:#b0b4ba;--faint:#777b84;--accent:#6e6ade;--soft:#232350;
+--strong:#3c3f44;--text:#edeef0;--muted:#b0b4ba;--faint:#777b84;--accent:#6e8ef5;--soft:#1c2544;
 --danger:#ff6369;--warn:#ffa057;--ok:#3dd68c;--weekend:#151618;--grid:#222326;--today:#ff6369}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 .wrap{max-width:1180px;margin:0 auto;padding:24px 16px 48px}
 header{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
 h1{font-size:24px;line-height:1.2;margin:0 0 4px;font-weight:650;letter-spacing:-.01em}
 .meta{color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;row-gap:2px}
-.meta span+span::before{content:"·";margin:0 8px;color:var(--faint)}
+.meta{gap:14px}
 .progress{min-width:220px}
 .progress .label{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px}
 .bar{height:8px;border-radius:4px;background:var(--border);overflow:hidden}
@@ -42,7 +42,7 @@ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
 .g-label.done{color:var(--faint)}
 .g-track{position:relative;flex:0 0 auto}
 .g-head{position:sticky;top:0;z-index:4;background:var(--surface);height:52px;border-bottom:1px solid var(--border)}
-.g-head .g-label{height:52px;color:var(--faint);font-size:12px;font-weight:600;letter-spacing:.05em;align-items:flex-end;padding-bottom:8px}
+.g-head .g-label{height:52px;color:var(--muted);font-size:13px;font-weight:500;align-items:flex-end;padding-bottom:8px}
 .g-month,.g-day{position:absolute;font-size:12px;color:var(--muted);white-space:nowrap}
 .g-month{top:6px;font-weight:600;color:var(--text);padding-left:6px;border-left:1px solid var(--border);height:46px}
 .g-day{top:28px;text-align:center}
@@ -66,9 +66,8 @@ table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--grid);vertical-align:middle}
 th{color:var(--muted);font-weight:600;font-size:13px;position:sticky;top:0;background:var(--surface)}
 td.indent1{padding-left:32px}td.indent2{padding-left:52px}td.indent3{padding-left:72px}
-.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 9px 2px 8px;border-radius:999px;font-size:12px;font-weight:500;
-background:color-mix(in srgb,var(--c) 15%,transparent);white-space:nowrap}
-.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c)}
+.pill{display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:500;
+color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);white-space:nowrap}
 .mini{display:flex;align-items:center;gap:8px;min-width:110px}
 .mini .bar{flex:1;height:6px}
 .late{color:var(--danger)}
@@ -76,7 +75,7 @@ background:color-mix(in srgb,var(--c) 15%,transparent);white-space:nowrap}
 .table-wrap{overflow-x:auto}
 /* budžet */
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px}
-.kpi{padding:14px 16px}.kpi small{display:block;font-size:11px;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.kpi{padding:14px 16px}.kpi small{display:block;font-size:13px;color:var(--muted)}
 .kpi strong{font-size:20px;font-weight:650}
 .over{color:var(--danger)}.warn{color:var(--warn)}
 /* komentari */
@@ -151,7 +150,7 @@ th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}}
   }
   function parse(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
   function fmt(s, year) {
-    if (!s) return "—";
+    if (!s) return "-";
     var d = parse(s);
     return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + (year === false ? "" : d.getFullYear() + ".");
   }
@@ -164,7 +163,7 @@ th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}}
   document.getElementById("name").textContent = P.name;
   document.title = P.name + " · pregled projekta";
   var meta = document.getElementById("meta");
-  [P.client, P.status, (P.start || P.end) ? fmt(P.start) + " – " + fmt(P.end) : ""].forEach(function (t) {
+  [P.client, P.status, (P.start || P.end) ? fmt(P.start) + " - " + fmt(P.end) : ""].forEach(function (t) {
     if (t) meta.appendChild(el("span", null, t));
   });
   document.getElementById("ptext").textContent = P.done + " od " + P.total + " zadataka završeno";
@@ -172,7 +171,7 @@ th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}}
   document.getElementById("pbar").style.width = P.progress + "%";
   var gen = new Date(D.generated_at);
   document.getElementById("foot").textContent = "Stanje na dan " + gen.toLocaleDateString("sr-Latn-RS") +
-    " u " + gen.toLocaleTimeString("sr-Latn-RS", { hour: "2-digit", minute: "2-digit" }) + " · Etapa";
+    " u " + gen.toLocaleTimeString("sr-Latn-RS", { hour: "2-digit", minute: "2-digit" }) + ". Napravljeno u Etapi.";
 
   // tabovi
   var tabs = [];
@@ -214,7 +213,7 @@ th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}}
 
     var grid = el("div", { class: "g-grid", style: "width:" + (width + 240) + "px" });
     var head = el("div", { class: "g-row g-head" });
-    head.appendChild(el("div", { class: "g-label" }, "ZADATAK"));
+    head.appendChild(el("div", { class: "g-label" }, "Zadatak"));
     var htrack = el("div", { class: "g-track", style: "width:" + width + "px" });
     for (var i = 0; i < n; i++) {
       var d = addDays(lo, i);
@@ -276,7 +275,7 @@ th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}}
         var left = x(s), w = Math.max(days(s, e) + 1, 1) * ppd;
         var cls = "g-bar" + (t.parent ? " parent" : "") + (t.done ? " done" : "") + (t.overdue ? " late" : "");
         var bar = el("div", { class: cls, style: "left:" + left + "px;width:" + w + "px",
-          title: t.title + "\n" + fmt(t.start) + " – " + fmt(t.end) + "\n" + t.progress + "%" });
+          title: t.title + "\n" + fmt(t.start) + " - " + fmt(t.end) + "\n" + t.progress + "%" });
         bar.appendChild(el("i", { style: "width:" + t.progress + "%" }));
         tr.appendChild(bar);
         tr.appendChild(el("div", { class: "g-name", style: "left:" + (left + w + 8) + "px" }, t.title));
@@ -327,8 +326,8 @@ th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}}
   function renderBudget() {
     var B = D.budget, box = document.getElementById("panel-budget");
     var k = el("div", { class: "kpis" });
-    [["BUDŽET", B.planned, ""], ["POTROŠENO", B.spent, B.state === "over" ? "over" : (B.state === "warn" ? "warn" : "")],
-     ["PREOSTALO", B.remaining, B.state === "over" ? "over" : ""], ["ISKORIŠĆENO", B.percent + "%", ""]].forEach(function (x) {
+    [["Budžet", B.planned, ""], ["Potrošeno", B.spent, B.state === "over" ? "over" : (B.state === "warn" ? "warn" : "")],
+     ["Preostalo", B.remaining, B.state === "over" ? "over" : ""], ["Iskorišćeno", B.percent + "%", ""]].forEach(function (x) {
       var c = el("div", { class: "card kpi" });
       c.appendChild(el("small", null, x[0]));
       c.appendChild(el("strong", { class: x[2] }, x[1]));
@@ -377,9 +376,9 @@ th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}}
       var li = el("li"), who = el("div", { class: "who" });
       who.appendChild(el("b", null, c.author || "Gost"));
       var when = new Date(c.posted_at);
-      var extra = " · " + when.toLocaleDateString("sr-Latn-RS") + " " +
+      var extra = ", " + when.toLocaleDateString("sr-Latn-RS") + " " +
         when.toLocaleTimeString("sr-Latn-RS", { hour: "2-digit", minute: "2-digit" });
-      if (c.task_id && titles[c.task_id]) extra += " · " + titles[c.task_id];
+      if (c.task_id && titles[c.task_id]) extra += " (" + titles[c.task_id] + ")";
       who.appendChild(document.createTextNode(extra));
       li.appendChild(who);
       li.appendChild(el("div", { class: "txt" }, c.text));

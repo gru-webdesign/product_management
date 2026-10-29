@@ -17,11 +17,11 @@ DEFAULT_SETTINGS: dict[str, str] = {
 }
 
 DEFAULT_CATEGORIES: list[tuple[str, str]] = [
-    ("Rad", "#5B5BD6"),
-    ("Materijal", "#12A594"),
-    ("Softver i licence", "#3E63DD"),
-    ("Putni troškovi", "#F76B15"),
-    ("Ostalo", "#8B8D98"),
+    ("Rad", "#2F55D4"),
+    ("Materijal", "#0E7C86"),
+    ("Softver i licence", "#7A5AC0"),
+    ("Putni troškovi", "#B8620A"),
+    ("Ostalo", "#7C7C86"),
 ]
 
 

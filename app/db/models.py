@@ -97,7 +97,7 @@ class Project(IdMixin, TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text, default="")
     client: Mapped[str] = mapped_column(String(200), default="")
-    color: Mapped[str] = mapped_column(String(9), default="#5B5BD6")
+    color: Mapped[str] = mapped_column(String(9), default="#2F55D4")
     start_date: Mapped[dt.date | None] = mapped_column(Date)
     end_date: Mapped[dt.date | None] = mapped_column(Date)
     status: Mapped[ProjectStatus] = mapped_column(

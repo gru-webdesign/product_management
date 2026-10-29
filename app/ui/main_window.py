@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QProgressBar,
     QPushButton,
     QStackedWidget,
     QTabWidget,
@@ -30,7 +31,7 @@ from app.ui.views.base import ProjectView
 
 
 def _fmt(d) -> str:
-    return d.strftime("%d.%m.%Y.") if d else "—"
+    return d.strftime("%d.%m.%Y.") if d else "?"
 
 
 class EmptyState(QWidget):
@@ -44,7 +45,7 @@ class EmptyState(QWidget):
         text.setObjectName("EmptyText")
         button = QPushButton("Novi projekat")
         button.setProperty("primary", True)
-        button.setIcon(icons.icon("plus", "#FFFFFF"))
+        button.setIcon(icons.icon("plus", theme.tokens().accent_text))
         button.clicked.connect(on_create)
         for w in (title, text):
             w.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -64,17 +65,36 @@ class ProjectHeader(QFrame):
         lay.setSpacing(10)
 
         text = QVBoxLayout()
-        text.setSpacing(2)
+        text.setSpacing(6)
         self.title = QLabel()
         self.title.setObjectName("ProjectTitle")
-        self.meta = QLabel()
-        self.meta.setObjectName("ProjectMeta")
         text.addWidget(self.title)
-        text.addWidget(self.meta)
+        meta = QHBoxLayout()
+        meta.setSpacing(18)
+        self.client = QLabel()
+        self.client.setProperty("muted", True)
+        self.status = QLabel()
+        self.status.setObjectName("StatusChip")
+        self.dates = QLabel()
+        self.dates.setProperty("muted", True)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setFixedSize(90, 6)
+        self.progress_bar.setTextVisible(False)
+        self.progress_text = QLabel()
+        self.progress_text.setProperty("muted", True)
+        progress = QHBoxLayout()
+        progress.setSpacing(8)
+        progress.addWidget(self.progress_bar)
+        progress.addWidget(self.progress_text)
+        for w in (self.client, self.status, self.dates):
+            meta.addWidget(w)
+        meta.addLayout(progress)
+        meta.addStretch(1)
+        text.addLayout(meta)
         lay.addLayout(text, 1)
 
         self.search = QLineEdit()
-        self.search.setPlaceholderText("Pretraži zadatke…  (Ctrl+F)")
+        self.search.setPlaceholderText("Pretraži zadatke (Ctrl+F)")
         self.search.addAction(icons.icon("search"), QLineEdit.ActionPosition.LeadingPosition)
         self.search.setClearButtonEnabled(True)
         self.search.setFixedWidth(240)
@@ -89,7 +109,7 @@ class ProjectHeader(QFrame):
 
         self.add_task_button = QPushButton("Zadatak")
         self.add_task_button.setProperty("primary", True)
-        self.add_task_button.setIcon(icons.icon("plus", "#FFFFFF"))
+        self.add_task_button.setIcon(icons.icon("plus", theme.tokens().accent_text))
         self.add_task_button.setToolTip("Novi zadatak (Ctrl+N)")
         lay.addWidget(self.add_task_button)
 
@@ -102,17 +122,20 @@ class ProjectHeader(QFrame):
             if p is None:
                 return
             done, total, pct = project_service.progress(s, pid)
-            parts = []
-            if p.client:
-                parts.append(p.client)
-            parts.append(PROJECT_STATUS[p.status])
-            if p.start_date or p.end_date:
-                parts.append(f"{_fmt(p.start_date)} – {_fmt(p.end_date)}")
-            parts.append(f"{done}/{total} zadataka · {pct}%")
-            if p.archived:
-                parts.append("arhiviran")
             self.title.setText(p.name)
-            self.meta.setText("   ·   ".join(parts))
+            self.client.setText(p.client)
+            self.client.setVisible(bool(p.client))
+            self.status.setText("Arhiviran" if p.archived else PROJECT_STATUS[p.status])
+            has_dates = bool(p.start_date or p.end_date)
+            self.dates.setText(f"{_fmt(p.start_date)} - {_fmt(p.end_date)}" if has_dates else "")
+            self.dates.setVisible(has_dates)
+            self.progress_bar.setValue(pct)
+            self.progress_text.setText(f"{done} od {total} zadataka završeno, {pct}%")
+
+    def meta_text(self) -> str:
+        return "  ".join(
+            w.text() for w in (self.client, self.status, self.dates, self.progress_text) if w.text()
+        )
 
 
 class MainWindow(QMainWindow):
@@ -165,7 +188,7 @@ class MainWindow(QMainWindow):
         root.addWidget(self.stack, 1)
         self.setCentralWidget(central)
 
-        self.statusBar().showMessage(f"Baza: {db.paths.db_path}   ·   v{__version__}")
+        self.statusBar().showMessage(f"Baza: {db.paths.db_path}")
         self.ctx.message.connect(lambda m: self.statusBar().showMessage(m, 6000))
         self.ctx.project_changed.connect(self._project_changed)
         self.ctx.data_changed.connect(self.header.reload)
@@ -302,7 +325,7 @@ class MainWindow(QMainWindow):
             ("Ctrl+N", "Novi zadatak"),
             ("Ctrl+Shift+N", "Novi projekat"),
             ("Ctrl+F", "Pretraga"),
-            ("Ctrl+1 … Ctrl+4", "Lista, Kanban, Gant, Budžet"),
+            ("Ctrl+1 do Ctrl+4", "Lista, Kanban, Gant, Budžet"),
             ("F2 / Enter", "Otvori izabrani zadatak (Lista)"),
             ("Delete", "Obriši izabrano (Lista, zavisnost na Gantu)"),
             ("Ctrl+točkić", "Zum na Gantu"),

@@ -87,7 +87,7 @@ def test_render_escapes_script_breakout(session, project):
     m = re.search(r'<script id="data" type="application/json">(.*?)</script>', html, re.S)
     data = json.loads(m.group(1))
     assert any(t["title"].startswith("</script>") for t in data["tasks"])
-    assert "<title>Redizajn sajta — demo · pregled projekta</title>" in html
+    assert "<title>Redizajn sajta (demo) · pregled projekta</title>" in html
 
 
 def test_publish_update_pin_and_revoke(session, project, client, worker):

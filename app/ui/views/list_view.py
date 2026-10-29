@@ -213,6 +213,7 @@ class ListView(ProjectView):
         items: dict[str, TaskItem] = {}
         bold = QFont(self.tree.font())
         bold.setWeight(QFont.Weight.Medium)
+        num_font = theme.mono(self.tree.font(), -0.5)
         for row in data:
             item = TaskItem()
             parent_item = None if flat else items.get(row["parent_id"])
@@ -257,6 +258,8 @@ class ListView(ProjectView):
             )
             item.setText(C_TAGS, "  ".join(f"#{x}" for x in row["tags"]))
             item.setForeground(C_TAGS, QColor(t.muted))
+            for col in (C_START, C_DUE, C_EST, C_COST):
+                item.setFont(col, num_font)
             if row["id"] in selected:
                 item.setSelected(True)
         for task_id, item in items.items():

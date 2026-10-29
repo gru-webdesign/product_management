@@ -28,7 +28,7 @@ def test_project_appears_and_is_selected(qtbot, db):
     assert window.sidebar.list.count() == 1
     assert window.stack.currentIndex() == 1
     assert window.header.title.text() == "Prvi"
-    assert "Firma" in window.header.meta.text()
+    assert "Firma" in window.header.meta_text()
 
 
 def test_archive_hides_project(qtbot, db):

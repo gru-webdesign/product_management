@@ -129,7 +129,7 @@ class SettingsDialog(QDialog):
         intro.setWordWrap(True)
         intro.setProperty("muted", True)
         f.addRow(intro)
-        help_button = QPushButton("Uputstvo za postavljanje Worker-a →")
+        help_button = QPushButton("Uputstvo za postavljanje Worker-a")
         help_button.setProperty("link", True)
         help_button.setCursor(Qt.CursorShape.PointingHandCursor)
         help_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(WORKER_HELP)))
@@ -139,7 +139,7 @@ class SettingsDialog(QDialog):
         self.admin_key = QLineEdit()
         self.admin_key.setEchoMode(QLineEdit.EchoMode.Password)
         self.admin_key.setPlaceholderText(
-            "sačuvan — upiši novi da ga promeniš" if has_key else "ADMIN_KEY iz uputstva"
+            "Sačuvan. Upiši novi da ga promeniš." if has_key else "ADMIN_KEY iz uputstva"
         )
         f.addRow("Adresa Worker-a", self.worker_url)
         f.addRow("Tajni ključ", self.admin_key)

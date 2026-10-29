@@ -35,7 +35,7 @@ from app.db.models import (  # noqa: E402
 )
 from app.services.money import to_minor  # noqa: E402
 
-DEMO_NAME = "Redizajn sajta — demo"
+DEMO_NAME = "Redizajn sajta (demo)"
 
 
 def seed(session: Session, today: date | None = None) -> Project:
@@ -52,14 +52,14 @@ def seed(session: Session, today: date | None = None) -> Project:
         name=DEMO_NAME,
         description="Primer projekta sa zadacima, zavisnostima, milestone-ima i budžetom.",
         client="Picerija Primer",
-        color="#5B5BD6",
+        color="#2F55D4",
         start_date=d(-10),
         end_date=d(35),
         status=ProjectStatus.ACTIVE,
     )
     session.add(project)
 
-    tag_names = {"dizajn": "#8E4EC6", "razvoj": "#3E63DD", "klijent": "#F76B15"}
+    tag_names = {"dizajn": "#7A5AC0", "razvoj": "#2F55D4", "klijent": "#B8620A"}
     tags = {}
     for name, color in tag_names.items():
         tag = session.scalar(select(Tag).where(Tag.name == name)) or Tag(name=name, color=color)

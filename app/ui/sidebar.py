@@ -61,7 +61,7 @@ class Sidebar(QFrame):
         lay.addSpacing(10)
 
         head = QHBoxLayout()
-        title = QLabel("PROJEKTI")
+        title = QLabel("Projekti")
         title.setObjectName("SidebarTitle")
         head.addWidget(title)
         head.addStretch(1)

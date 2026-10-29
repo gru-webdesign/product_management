@@ -398,7 +398,7 @@ class Summary:
             out.append(
                 (
                     "warn",
-                    f"Potrošeno je {self.percent}% budžeta projekta — ostalo {fm(self.remaining)}.",
+                    f"Potrošeno je {self.percent}% budžeta, ostalo je {fm(self.remaining)}.",
                 )
             )
         for line in self.lines:

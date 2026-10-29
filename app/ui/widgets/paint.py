@@ -16,24 +16,26 @@ def soft(color: str, alpha: int = 38) -> QColor:
 
 
 def draw_pill(p: QPainter, rect: QRect, text: str, color: str, font: QFont | None = None) -> int:
-    """Nacrta zaobljeni bedž sa tačkom u boji; vraća širinu."""
+    """Bedž stanja: obojena podloga i tekst u boji stanja (bez tačke); vraća širinu."""
+    t = theme.tokens()
     f = QFont(font or p.font())
     f.setPointSizeF(max(7.5, f.pointSizeF() - 0.75))
     f.setWeight(QFont.Weight.Medium)
     fm = QFontMetrics(f)
-    w = fm.horizontalAdvance(text) + 24
+    w = fm.horizontalAdvance(text) + 18
     h = min(rect.height() - 4, fm.height() + 6)
     r = QRectF(rect.left(), rect.center().y() - h / 2 + 0.5, w, h)
+    ink = QColor(color)
+    if t.name == "dark":
+        ink = ink.lighter(150)
     p.save()
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
     p.setPen(Qt.PenStyle.NoPen)
-    p.setBrush(soft(color, 34 if theme.tokens().name == "light" else 60))
+    p.setBrush(soft(color, 30 if t.name == "light" else 70))
     p.drawRoundedRect(r, h / 2, h / 2)
-    p.setBrush(QColor(color))
-    p.drawEllipse(QRectF(r.left() + 8, r.center().y() - 3, 6, 6))
     p.setFont(f)
-    p.setPen(QColor(theme.tokens().text))
-    p.drawText(r.adjusted(18, 0, -4, 0), Qt.AlignmentFlag.AlignVCenter, text)
+    p.setPen(ink)
+    p.drawText(r, Qt.AlignmentFlag.AlignCenter, text)
     p.restore()
     return w
 

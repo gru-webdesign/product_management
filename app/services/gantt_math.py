@@ -152,4 +152,4 @@ def duration_days(start: date, end: date) -> int:
 def describe_span(start: date, end: date) -> str:
     n = duration_days(start, end)
     days = "dan" if n % 10 == 1 and n % 100 != 11 else "dana"
-    return f"{start.strftime('%d.%m.')} – {end.strftime('%d.%m.%Y.')}  ({n} {days})"
+    return f"{start.strftime('%d.%m.')} - {end.strftime('%d.%m.%Y.')}  ({n} {days})"

@@ -71,8 +71,8 @@ def add(
         raise ValueError("Ova zavisnost već postoji.")
     if would_create_cycle(session, predecessor.id, successor.id):
         raise ValueError(
-            f"„{successor.title}“ već (posredno) prethodi zadatku „{predecessor.title}“ — "
-            "veza bi napravila krug."
+            f"„{successor.title}“ već (posredno) prethodi zadatku „{predecessor.title}“, "
+            "pa bi veza napravila krug."
         )
     dep = TaskDependency(predecessor=predecessor, successor=successor, type=type, lag_days=lag_days)
     session.add(dep)

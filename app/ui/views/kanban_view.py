@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.db.models import TaskStatus
-from app.labels import PRIORITY, PRIORITY_COLOR, TASK_STATUS, TASK_STATUS_COLOR
+from app.labels import PRIORITY, PRIORITY_COLOR, TASK_STATUS
 from app.services import tasks as task_service
 from app.services.tasks import TaskFilter, is_overdue
 from app.ui import icons, theme
@@ -108,7 +108,7 @@ class CardDelegate(QStyledItemDelegate):
             p.drawText(
                 meta.adjusted(used + 10, 0, 0, 0),
                 Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
-                ("Kasni · " if card["overdue"] else "Rok ") + card["due"],
+                ("Kasni, rok " if card["overdue"] else "Rok ") + card["due"],
             )
         if card.get("estimate"):
             p.setFont(small)
@@ -223,13 +223,10 @@ class ColumnFrame(QFrame):
         lay.setContentsMargins(10, 10, 10, 10)
         lay.setSpacing(8)
         head = QHBoxLayout()
-        dot = QLabel("●")
-        dot.setStyleSheet(f"color: {TASK_STATUS_COLOR[status]}; font-size: 10px;")
         title = QLabel(TASK_STATUS[status])
         title.setProperty("heading", True)
         self.count = QLabel("0")
         self.count.setProperty("muted", True)
-        head.addWidget(dot)
         head.addWidget(title)
         head.addWidget(self.count)
         head.addStretch(1)
@@ -255,7 +252,7 @@ class KanbanView(ProjectView):
         bar.addWidget(self.show_subtasks)
         bar.addStretch(1)
         hint = QLabel(
-            "Prevuci karticu u drugu kolonu da promeniš status · dupli klik otvara zadatak"
+            "Prevuci karticu u drugu kolonu da promeniš status. Dupli klik otvara zadatak."
         )
         hint.setProperty("faint", True)
         bar.addWidget(hint)

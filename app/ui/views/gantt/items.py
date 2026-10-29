@@ -119,7 +119,7 @@ class TaskBarItem(QGraphicsObject):
                 f = self._label_font()
                 f.setWeight(QFont.Weight.DemiBold)
                 p.setFont(f)
-                p.setPen(QColor("#FFFFFF") if pct > 40 else QColor(t.text))
+                p.setPen(QColor(theme.tokens().accent_text) if pct > 40 else QColor(t.text))
                 p.drawText(
                     r.adjusted(6, 0, -4, 0),
                     Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,

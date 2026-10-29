@@ -13,7 +13,6 @@ from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPen
 from PySide6.QtWidgets import QFrame, QGraphicsScene, QGraphicsView
 
-from app.labels import TASK_STATUS_COLOR
 from app.services.gantt_math import TimeScale, header_ticks, is_weekend, make_scale
 from app.services.money import format_money
 from app.ui import theme
@@ -454,7 +453,7 @@ class GanttChart(QGraphicsView):
                 p.setFont(small)
                 p.setPen(QColor(t.faint))
                 n = len(self.milestones)
-                label = f"MILESTONE-I  ·  {n}" if n else "MILESTONE-I"
+                label = f"Milestone-i ({n})" if n else "Milestone-i"
                 p.drawText(
                     QRectF(16, y, lw - 24, ROW_H),
                     Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
@@ -463,17 +462,13 @@ class GanttChart(QGraphicsView):
                 continue
             row = self.rows[i - 1]
             indent = 16 + row.depth * 16
-            p.setRenderHint(QPainter.RenderHint.Antialiasing)
-            p.setPen(Qt.PenStyle.NoPen)
-            p.setBrush(QColor(TASK_STATUS_COLOR[row.status]))
-            p.drawEllipse(QPointF(indent + 3, y + ROW_H / 2), 3.5, 3.5)
             p.setFont(bold if row.depth == 0 else base)
             p.setPen(QColor(t.faint if row.done else t.text))
             text_w = LEFT_W - indent - 22
             fm = QFontMetricsF(p.font())
             title = fm.elidedText(row.title, Qt.TextElideMode.ElideRight, text_w)
             p.drawText(
-                QRectF(indent + 14, y, text_w, ROW_H),
+                QRectF(indent, y, text_w, ROW_H),
                 Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
                 title,
             )
@@ -483,7 +478,7 @@ class GanttChart(QGraphicsView):
                 p.drawText(
                     QRectF(lw + 12, y, 260, ROW_H),
                     Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
-                    "bez datuma — dupli klik u redu postavlja datum",
+                    "Bez datuma. Dupli klik u redu postavlja datum.",
                 )
             if self.show_cost:
                 p.setFont(small)
@@ -491,7 +486,7 @@ class GanttChart(QGraphicsView):
                 p.drawText(
                     QRectF(LEFT_W, y, COST_W - 12, ROW_H),
                     Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight,
-                    format_money(row.cost_minor) if row.cost_minor else "—",
+                    format_money(row.cost_minor) if row.cost_minor else "",
                 )
 
         if not self.rows:
@@ -511,13 +506,13 @@ class GanttChart(QGraphicsView):
         p.drawText(
             QRectF(16, 0, LEFT_W - 16, HEADER_H - 6),
             Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignLeft,
-            "ZADATAK",
+            "Zadatak",
         )
         if self.show_cost:
             p.drawText(
                 QRectF(LEFT_W, 0, COST_W - 12, HEADER_H - 6),
                 Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight,
-                "TROŠAK",
+                "Trošak",
             )
         p.setPen(QPen(QColor(t.border), 1))
         p.drawLine(QPointF(lw - 0.5, 0), QPointF(lw - 0.5, h))

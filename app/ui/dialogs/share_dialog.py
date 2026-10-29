@@ -34,7 +34,7 @@ class ShareDialog(QDialog):
         self.project_id = ctx.project_id
         with ctx.session() as s:
             project = project_service.get(s, self.project_id)
-            self.setWindowTitle(f"Podeli — {project.name}")
+            self.setWindowTitle(f"Podeli: {project.name}")
         self.setMinimumSize(620, 640)
         root = QVBoxLayout(self)
         root.setContentsMargins(20, 18, 20, 16)
@@ -84,7 +84,7 @@ class ShareDialog(QDialog):
         self.pin = QLineEdit()
         self.pin.setEchoMode(QLineEdit.EchoMode.Password)
         self.pin.setMaxLength(32)
-        self.pin.setPlaceholderText("4–32 znaka")
+        self.pin.setPlaceholderText("4 do 32 znaka")
         self.use_pin.toggled.connect(self._pin_toggled)
         pin_row.addWidget(self.use_pin)
         pin_row.addWidget(self.pin, 1)
@@ -121,7 +121,7 @@ class ShareDialog(QDialog):
         self.revoke_button.clicked.connect(self._revoke)
         self.publish_button = QPushButton("Objavi link")
         self.publish_button.setProperty("primary", True)
-        self.publish_button.setIcon(icons.icon("share", "#FFFFFF"))
+        self.publish_button.setIcon(icons.icon("share", theme.tokens().accent_text))
         self.publish_button.clicked.connect(self._publish)
         actions.addWidget(self.revoke_button)
         actions.addWidget(self.publish_button)
@@ -165,7 +165,7 @@ class ShareDialog(QDialog):
         self.use_pin.setChecked(self.has_pin)
         self.pin.clear()
         self.pin.setPlaceholderText(
-            "PIN je postavljen — upiši novi da ga promeniš" if self.has_pin else "4–32 znaka"
+            "PIN je postavljen. Upiši novi da ga promeniš." if self.has_pin else "4 do 32 znaka"
         )
         self._pin_toggled(self.has_pin)
         self.auto_update.setChecked(auto)
@@ -214,7 +214,7 @@ class ShareDialog(QDialog):
         self._load()
         QGuiApplication.clipboard().setText(url)
         self.status.setText(
-            "Objavljeno. Link je kopiran — pošalji ga klijentu"
+            "Objavljeno. Link je kopiran, pošalji ga klijentu"
             + (" zajedno sa PIN-om." if self.use_pin.isChecked() else ".")
         )
         self.ctx.notify("Link za deljenje je objavljen.")
