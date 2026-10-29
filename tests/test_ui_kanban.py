@@ -53,7 +53,8 @@ def test_drop_changes_status(kanban):
     w, view = kanban
     item = view.columns[TaskStatus.TODO].list.item(0)
     tid = item.data(ROLE_ID)
-    view._dropped([tid], TaskStatus.REVIEW)
+    view.columns[TaskStatus.REVIEW].list.dropped.emit([tid], TaskStatus.REVIEW)
+    QApplication.processEvents()
     assert counts(view)[TaskStatus.REVIEW] == 1
     with w.db.session() as s:
         assert task_service.get(s, tid).status == TaskStatus.REVIEW

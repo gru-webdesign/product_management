@@ -148,6 +148,7 @@ class MainWindow(QMainWindow):
 
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
+        self.tabs.tabBar().setDrawBase(False)
         self.views: list[ProjectView] = self._make_views()
         for view in self.views:
             self.tabs.addTab(view, icons.icon(view.icon_name), view.title)

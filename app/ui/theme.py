@@ -273,7 +273,13 @@ QMenuBar {{ background: {t.bg}; }}
 QMenuBar::item:selected {{ background: {t.border}; }}
 QStatusBar {{ background: {t.sidebar}; color: {t.muted}; border-top: 1px solid {t.border}; }}
 QSplitter::handle {{ background: {t.border}; }}
-QCheckBox {{ spacing: 6px; }}
+QCheckBox {{ spacing: 7px; }}
+QCheckBox::indicator {{ width: 15px; height: 15px; border: 1px solid {t.border_strong};
+    border-radius: 4px; background: {t.surface}; }}
+QCheckBox::indicator:hover {{ border-color: {t.accent}; }}
+QCheckBox::indicator:checked {{ background: {t.accent}; border-color: {t.accent};
+    image: url({_icon("check-white")}); }}
+QCheckBox::indicator:disabled {{ background: {t.surface_alt}; border-color: {t.border}; }}
 QGroupBox {{ border: 1px solid {t.border}; border-radius: 8px; margin-top: 14px;
     padding: 10px; font-weight: 600; }}
 QGroupBox::title {{ subcontrol-origin: margin; left: 10px; padding: 0 4px; }}
@@ -288,8 +294,12 @@ QGroupBox::title {{ subcontrol-origin: margin; left: 10px; padding: 0 4px; }}
 """
 
 
+def _icon(name: str) -> str:
+    return (FONTS_DIR.parent / "icons" / f"{name}.svg").as_posix()
+
+
 def _chevron(t: Tokens) -> str:
-    return (FONTS_DIR.parent / "icons" / f"chevron-down-{t.name}.svg").as_posix()
+    return _icon(f"chevron-down-{t.name}")
 
 
 def repolish(widget) -> None:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -114,7 +114,7 @@ class ListView(ProjectView):
         self.tree.setSelectionMode(QTreeWidget.SelectionMode.ExtendedSelection)
         self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self._menu)
-        self.tree.itemActivated.connect(lambda item, _c: self.edit(item))
+        self.tree.itemActivated.connect(lambda item, _c: self._edit_later(item))
         self.tree.setItemDelegateForColumn(C_STATUS, PillDelegate(self.tree))
         self.tree.setItemDelegateForColumn(C_PRIO, PillDelegate(self.tree))
         self.tree.setItemDelegateForColumn(C_PROGRESS, ProgressDelegate(self.tree))
@@ -330,6 +330,11 @@ class ListView(ProjectView):
 
     def selected_ids(self) -> list[str]:
         return [i.data(C_TITLE, ROLE_ID) for i in self.tree.selectedItems()]
+
+    def _edit_later(self, item: QTreeWidgetItem) -> None:
+        # Dijalog se otvara posle dvoklika: čuvanje osvežava stablo i briše ovu stavku.
+        tid = item.data(C_TITLE, ROLE_ID)
+        QTimer.singleShot(0, lambda: open_task(self.ctx, tid, self.window()))
 
     def edit(self, item: QTreeWidgetItem | None) -> None:
         if item:

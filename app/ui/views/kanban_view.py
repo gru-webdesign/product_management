@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from PySide6.QtCore import QRect, QRectF, QSize, Qt, Signal
+from PySide6.QtCore import QRect, QRectF, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -266,10 +266,10 @@ class KanbanView(ProjectView):
         self.columns: dict[TaskStatus, ColumnFrame] = {}
         for status in TaskStatus:
             frame = ColumnFrame(status, self._quick_add)
-            frame.list.dropped.connect(self._dropped)
-            frame.list.itemDoubleClicked.connect(
-                lambda item: open_task(self.ctx, item.data(ROLE_ID), self.window())
-            )
+            # Obrada posle završetka prevlačenja/dvoklika: osvežavanje briše stavke liste,
+            # a one ne smeju nestati dok Qt još obrađuje događaj.
+            frame.list.dropped.connect(self._dropped, Qt.ConnectionType.QueuedConnection)
+            frame.list.itemDoubleClicked.connect(self._open_later)
             frame.list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             frame.list.customContextMenuRequested.connect(
                 lambda pos, lst=frame.list: self._menu(lst, pos)
@@ -325,6 +325,10 @@ class KanbanView(ProjectView):
                 item.setToolTip(card["title"])
                 lst.addItem(item)
             frame.count.setText(str(len(cards[status])))
+
+    def _open_later(self, item: QListWidgetItem) -> None:
+        tid = item.data(ROLE_ID)
+        QTimer.singleShot(0, lambda: open_task(self.ctx, tid, self.window()))
 
     def _dropped(self, ids: list[str], status: TaskStatus) -> None:
         def work(s):
