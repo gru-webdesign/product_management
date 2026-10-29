@@ -1,0 +1,13 @@
+# Cloudflare Worker za deljenje Etapa projekata. Uputstvo: share_worker/README.md
+name = "etapa-share"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# ID dobijaš komandom:  npx wrangler kv namespace create SHARES
+# i upisuješ ga ovde umesto ZAMENI_ME.
+[[kv_namespaces]]
+binding = "SHARES"
+id = "ZAMENI_ME"
+
+# Tajni ključ NE ide u ovaj fajl, već:  npx wrangler secret put ADMIN_KEY

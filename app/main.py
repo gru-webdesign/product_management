@@ -59,7 +59,15 @@ def main() -> int:
     theme.apply(app, initial_theme(db))
     window = MainWindow(db)
     window.show()
-    return app.exec()
+    from PySide6.QtCore import QTimer
+
+    QTimer.singleShot(1500, window.sync_comments_in_background)
+    code = app.exec()
+    from app.ui import background
+
+    background.wait_all(5000)
+    db.dispose()
+    return code
 
 
 if __name__ == "__main__":

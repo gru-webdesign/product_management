@@ -26,7 +26,7 @@ from app.services.defaults import get_setting
 from app.ui import icons, theme
 from app.ui.context import AppContext
 from app.ui.sidebar import Sidebar
-from app.ui.views.base import PlaceholderView, ProjectView
+from app.ui.views.base import ProjectView
 
 
 def _fmt(d) -> str:
@@ -171,23 +171,30 @@ class MainWindow(QMainWindow):
         self._make_menu()
         self._project_changed(self.ctx.project_id)
 
+        # deljenje: broj novih komentara na dugmetu, automatsko ažuriranje linka posle izmena
+        self._auto_timer = QTimer(self, singleShot=True, interval=6000)
+        self._auto_timer.timeout.connect(self._auto_publish)
+        self.ctx.data_changed.connect(self._update_share_badge)
+        self.ctx.data_changed.connect(self._schedule_auto_publish)
+        self.ctx.project_changed.connect(lambda _p: self._update_share_badge())
+        self._update_share_badge()
+
     # --- sastavljanje ----------------------------------------------------------------------------
 
     def _make_views(self) -> list[ProjectView]:
-        views: list[ProjectView] = []
-        builders = [
-            ("app.ui.views.list_view", "ListView", "Lista", "list"),
-            ("app.ui.views.kanban_view", "KanbanView", "Kanban", "kanban"),
-            ("app.ui.views.gantt.gantt_view", "GanttView", "Gant", "gantt"),
-            ("app.ui.views.budget_view", "BudgetView", "Budžet", "wallet"),
-        ]
-        import importlib
+        from app.ui.views.budget_view import BudgetView
+        from app.ui.views.gantt.gantt_view import GanttView
+        from app.ui.views.kanban_view import KanbanView
+        from app.ui.views.list_view import ListView
 
-        for module, cls, title, icon_name in builders:
-            try:
-                view = getattr(importlib.import_module(module), cls)(self.ctx)
-            except ModuleNotFoundError:
-                view = PlaceholderView(self.ctx, title)
+        views: list[ProjectView] = []
+        for cls, title, icon_name in (
+            (ListView, "Lista", "list"),
+            (KanbanView, "Kanban", "kanban"),
+            (GanttView, "Gant", "gantt"),
+            (BudgetView, "Budžet", "wallet"),
+        ):
+            view = cls(self.ctx)
             view.title, view.icon_name = title, icon_name
             views.append(view)
         return views
@@ -270,26 +277,87 @@ class MainWindow(QMainWindow):
     def open_share(self) -> None:
         if not self.ctx.project_id:
             return
-        try:
-            from app.ui.dialogs.share_dialog import ShareDialog
-        except ModuleNotFoundError:
-            self.ctx.notify("Deljenje linkom stiže u Koraku 12.")
-            return
+        from app.ui.dialogs.share_dialog import ShareDialog
+
         ShareDialog(self.ctx, self).exec()
+        self._update_share_badge()
 
     def open_settings(self) -> None:
-        try:
-            from app.ui.dialogs.settings_dialog import SettingsDialog
-        except ModuleNotFoundError:
-            return
+        from app.ui.dialogs.settings_dialog import SettingsDialog
+
         SettingsDialog(self.ctx, self).exec()
 
     def export_csv(self) -> None:
-        try:
-            from app.ui.export import export_tasks_dialog
-        except ModuleNotFoundError:
-            return
+        from app.ui.export import export_tasks_dialog
+
         export_tasks_dialog(self.ctx, self)
+
+    # --- deljenje u pozadini ---------------------------------------------------------------------
+
+    def _update_share_badge(self) -> None:
+        pid = self.ctx.project_id
+        if not pid:
+            return
+        from app.services import sharing
+
+        with self.ctx.session() as s:
+            n = sharing.unread_count(s, pid)
+            link = sharing.active_link(s, pid)
+            shared = bool(link and link.last_published_at)
+        text = "Podeli"
+        if n:
+            word = "novi komentar" if n == 1 else ("nova komentara" if n < 5 else "novih komentara")
+            text = f"Podeli · {n} {word}"
+        self.header.share_button.setText(text)
+        self.header.share_button.setToolTip(
+            "Projekat je podeljen linkom" if shared else "Podeli projekat linkom za pregled"
+        )
+
+    def _schedule_auto_publish(self) -> None:
+        self._auto_timer.start()
+
+    def _auto_publish(self) -> None:
+        pid = self.ctx.project_id
+        if not pid:
+            return
+        from app.services import sharing
+
+        with self.ctx.session() as s:
+            link = sharing.active_link(s, pid)
+            if not (link and link.auto_update and link.last_published_at and sharing.configured(s)):
+                return
+
+        def work(s):
+            with sharing.make_client(s) as client:
+                sharing.publish(s, client, pid)
+
+        from app.ui import background
+
+        background.run(
+            self.db,
+            work,
+            lambda _r: self.ctx.notify("Link za deljenje je ažuriran."),
+            lambda err: self.ctx.notify(f"Link nije ažuriran: {err}"),
+        )
+
+    def sync_comments_in_background(self) -> None:
+        from app.services import sharing
+        from app.ui import background
+
+        with self.ctx.session() as s:
+            if not sharing.configured(s):
+                return
+
+        def work(s):
+            with sharing.make_client(s) as client:
+                return sharing.sync_all(s, client)
+
+        def done(n):
+            if n:
+                self.ctx.notify(f"Stiglo je novih komentara sa linka: {n}.")
+                self.ctx.data_changed.emit()
+
+        background.run(self.db, work, done, lambda _e: None)
 
     def open_data_folder(self) -> None:
         from PySide6.QtCore import QUrl

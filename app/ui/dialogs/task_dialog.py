@@ -303,13 +303,10 @@ class TaskDialog(QDialog):
         w = QWidget()
         lay = QVBoxLayout(w)
         lay.setContentsMargins(4, 12, 4, 4)
-        try:
-            from app.ui.widgets.comments_panel import CommentsPanel
+        from app.ui.widgets.comments_panel import CommentsPanel
 
-            self.comments = CommentsPanel(self.ctx, task_id=self.task_id)
-            lay.addWidget(self.comments)
-        except ModuleNotFoundError:
-            lay.addWidget(QLabel("Komentari sa linka za deljenje."))
+        self.comments = CommentsPanel(self.ctx, task_id=self.task_id)
+        lay.addWidget(self.comments)
         return w
 
     def _history_tab(self) -> QWidget:

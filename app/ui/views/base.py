@@ -40,22 +40,3 @@ class ProjectView(QWidget):
 
     def reload(self) -> None:  # pragma: no cover - podklase
         raise NotImplementedError
-
-
-class PlaceholderView(ProjectView):
-    """Privremeni prikaz dok pravi ne bude gotov."""
-
-    def __init__(self, ctx: AppContext, title: str, parent=None) -> None:
-        super().__init__(ctx, parent)
-        from PySide6.QtCore import Qt
-        from PySide6.QtWidgets import QLabel, QVBoxLayout
-
-        self.title = title
-        lay = QVBoxLayout(self)
-        label = QLabel(f"{title} — uskoro")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setProperty("muted", True)
-        lay.addWidget(label)
-
-    def reload(self) -> None:
-        pass

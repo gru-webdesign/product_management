@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>{{ data.project.name }} · pregled projekta</title>
+<style>
+:root{--bg:#fcfcfd;--surface:#fff;--alt:#f5f5f7;--border:#e4e4e9;--strong:#cdced6;--text:#1c2024;
+--muted:#60646c;--faint:#8b8d98;--accent:#5b5bd6;--soft:#ededfc;--danger:#dc3e42;--warn:#e2730b;
+--ok:#2b9a66;--weekend:#f5f5f7;--grid:#eeeef1;--today:#e5484d}
+@media (prefers-color-scheme:dark){:root{--bg:#111113;--surface:#18191b;--alt:#1d1e21;--border:#2b2d31;
+--strong:#3c3f44;--text:#edeef0;--muted:#b0b4ba;--faint:#777b84;--accent:#6e6ade;--soft:#232350;
+--danger:#ff6369;--warn:#ffa057;--ok:#3dd68c;--weekend:#151618;--grid:#222326;--today:#ff6369}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 16px 48px}
+header{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+h1{font-size:24px;line-height:1.2;margin:0 0 4px;font-weight:650;letter-spacing:-.01em}
+.meta{color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;row-gap:2px}
+.meta span+span::before{content:"·";margin:0 8px;color:var(--faint)}
+.progress{min-width:220px}
+.progress .label{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px}
+.bar{height:8px;border-radius:4px;background:var(--border);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto}
+.tabs button{appearance:none;border:0;background:none;color:var(--muted);font:inherit;font-weight:500;
+padding:10px 14px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected=true]{color:var(--text);border-color:var(--accent);font-weight:650}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px}
+.panel[hidden]{display:none}
+/* gant */
+.gantt{overflow:auto;max-height:70vh;position:relative}
+.g-grid{position:relative}
+.g-row{display:flex;height:34px;border-bottom:1px solid var(--grid)}
+.g-label{position:sticky;left:0;z-index:3;flex:0 0 240px;width:240px;background:var(--surface);
+border-right:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 10px 0 14px;
+white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px}
+.g-label .dot{flex:0 0 7px;height:7px;border-radius:50%}
+.g-label b{font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.g-label .t{overflow:hidden;text-overflow:ellipsis}
+.g-label.done{color:var(--faint)}
+.g-track{position:relative;flex:0 0 auto}
+.g-head{position:sticky;top:0;z-index:4;background:var(--surface);height:52px;border-bottom:1px solid var(--border)}
+.g-head .g-label{height:52px;color:var(--faint);font-size:12px;font-weight:600;letter-spacing:.05em;align-items:flex-end;padding-bottom:8px}
+.g-month,.g-day{position:absolute;font-size:12px;color:var(--muted);white-space:nowrap}
+.g-month{top:6px;font-weight:600;color:var(--text);padding-left:6px;border-left:1px solid var(--border);height:46px}
+.g-day{top:28px;text-align:center}
+.g-day.today{color:var(--today);font-weight:700}
+.g-day.we{color:var(--faint)}
+.g-we{position:absolute;top:0;bottom:0;background:var(--weekend)}
+.g-vline{position:absolute;top:0;bottom:0;width:1px;background:var(--grid)}
+.g-today{position:absolute;top:0;bottom:0;width:2px;background:var(--today);z-index:2;opacity:.85}
+.g-bar{position:absolute;top:8px;height:18px;border-radius:5px;background:color-mix(in srgb,var(--accent) 28%,transparent);overflow:hidden;z-index:1}
+.g-bar>i{position:absolute;inset:0 auto 0 0;background:var(--accent)}
+.g-bar.done{background:var(--ok)}.g-bar.done>i{background:var(--ok)}
+.g-bar.late{background:color-mix(in srgb,var(--danger) 28%,transparent)}.g-bar.late>i{background:var(--danger)}
+.g-bar.parent{top:12px;height:10px;background:var(--text);opacity:.8;border-radius:3px}
+.g-bar.parent>i{display:none}
+.g-name{position:absolute;top:7px;font-size:12px;color:var(--muted);white-space:nowrap;z-index:1}
+.g-ms{position:absolute;top:10px;width:13px;height:13px;transform:rotate(45deg);background:var(--text);z-index:2;border:2px solid var(--surface)}
+.g-ms.done{background:var(--ok)}
+.g-msname{position:absolute;top:8px;font-size:13px;font-weight:600;white-space:nowrap;z-index:2}
+/* lista */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--grid);vertical-align:middle}
+th{color:var(--muted);font-weight:600;font-size:13px;position:sticky;top:0;background:var(--surface)}
+td.indent1{padding-left:32px}td.indent2{padding-left:52px}td.indent3{padding-left:72px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 9px 2px 8px;border-radius:999px;font-size:12px;font-weight:500;
+background:color-mix(in srgb,var(--c) 15%,transparent);white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c)}
+.mini{display:flex;align-items:center;gap:8px;min-width:110px}
+.mini .bar{flex:1;height:6px}
+.late{color:var(--danger)}
+.muted{color:var(--muted)}.faint{color:var(--faint)}
+.table-wrap{overflow-x:auto}
+/* budžet */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px}
+.kpi{padding:14px 16px}.kpi small{display:block;font-size:11px;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.kpi strong{font-size:20px;font-weight:650}
+.over{color:var(--danger)}.warn{color:var(--warn)}
+/* komentari */
+.comments{margin-top:22px;padding:18px}
+.comments h2{font-size:17px;margin:0 0 12px}
+form{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+form textarea{grid-column:1/-1;min-height:84px;resize:vertical}
+input,select,textarea{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--strong);border-radius:8px;padding:9px 11px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--accent) 40%,transparent);border-color:var(--accent)}
+.send{grid-column:1/-1;display:flex;align-items:center;gap:12px}
+.send button{appearance:none;border:0;border-radius:8px;background:var(--accent);color:#fff;font:inherit;font-weight:600;padding:10px 18px;cursor:pointer}
+.send button:disabled{opacity:.6;cursor:default}
+.msg{font-size:14px}
+.clist{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:10px}
+.clist li{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.clist .who{font-size:13px;color:var(--muted);margin-bottom:4px}
+.clist .who b{color:var(--text)}
+.clist .txt{white-space:pre-wrap;overflow-wrap:anywhere}
+footer{margin-top:28px;color:var(--faint);font-size:12px;text-align:center}
+@media (max-width:640px){h1{font-size:20px}.g-label{flex-basis:150px;width:150px}form{grid-template-columns:1fr}
+th:nth-child(4),td:nth-child(4),th:nth-child(5),td:nth-child(5){display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="name"></h1>
+      <div class="meta" id="meta"></div>
+    </div>
+    <div class="progress">
+      <div class="label"><span id="ptext"></span><span id="ppct"></span></div>
+      <div class="bar"><i id="pbar"></i></div>
+    </div>
+  </header>
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+  <section class="panel card" id="panel-gantt" hidden><div class="gantt" id="gantt"></div></section>
+  <section class="panel card" id="panel-list" hidden><div class="table-wrap"><table id="list"></table></div></section>
+  <section class="panel" id="panel-budget" hidden></section>
+
+  <section class="card comments">
+    <h2>Komentari</h2>
+    <form id="cform" autocomplete="on">
+      <input id="author" name="author" maxlength="80" placeholder="Tvoje ime">
+      <select id="task" name="task"><option value="">Ceo projekat</option></select>
+      <textarea id="text" name="text" maxlength="2000" required placeholder="Napiši komentar ili pitanje…"></textarea>
+      <div class="send"><button type="submit" id="sendbtn">Pošalji</button><span class="msg" id="cmsg"></span></div>
+    </form>
+    <ul class="clist" id="clist"></ul>
+  </section>
+  <footer id="foot"></footer>
+</div>
+<script id="data" type="application/json">{{ data|tojson }}</script>
+<script>
+(function () {
+  "use strict";
+  var D = JSON.parse(document.getElementById("data").textContent);
+  var P = D.project;
+  var token = location.pathname.split("/").filter(Boolean)[1] || "";
+  var MONTHS = ["januar","februar","mart","april","maj","jun","jul","avgust","septembar","oktobar","novembar","decembar"];
+  var WD = ["N","P","U","S","Č","P","S"];
+
+  function el(tag, attrs, text) {
+    var e = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      if (k === "class") e.className = attrs[k];
+      else if (k === "style") e.style.cssText = attrs[k];
+      else e.setAttribute(k, attrs[k]);
+    }
+    if (text !== undefined && text !== null) e.textContent = String(text);
+    return e;
+  }
+  function parse(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function fmt(s, year) {
+    if (!s) return "—";
+    var d = parse(s);
+    return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + (year === false ? "" : d.getFullYear() + ".");
+  }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function days(a, b) { return Math.round((b - a) / 86400000); }
+  function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function pill(text, color) { var s = el("span", { class: "pill", style: "--c:" + color }, text); return s; }
+
+  // zaglavlje
+  document.getElementById("name").textContent = P.name;
+  document.title = P.name + " · pregled projekta";
+  var meta = document.getElementById("meta");
+  [P.client, P.status, (P.start || P.end) ? fmt(P.start) + " – " + fmt(P.end) : ""].forEach(function (t) {
+    if (t) meta.appendChild(el("span", null, t));
+  });
+  document.getElementById("ptext").textContent = P.done + " od " + P.total + " zadataka završeno";
+  document.getElementById("ppct").textContent = P.progress + "%";
+  document.getElementById("pbar").style.width = P.progress + "%";
+  var gen = new Date(D.generated_at);
+  document.getElementById("foot").textContent = "Stanje na dan " + gen.toLocaleDateString("sr-Latn-RS") +
+    " u " + gen.toLocaleTimeString("sr-Latn-RS", { hour: "2-digit", minute: "2-digit" }) + " · Etapa";
+
+  // tabovi
+  var tabs = [];
+  if (D.show.gantt) tabs.push(["gantt", "Gant"]);
+  if (D.show.list) tabs.push(["list", "Zadaci"]);
+  if (D.show.budget && D.budget) tabs.push(["budget", "Budžet"]);
+  var nav = document.getElementById("tabs");
+  function select(key) {
+    tabs.forEach(function (t) {
+      document.getElementById("panel-" + t[0]).hidden = t[0] !== key;
+      nav.querySelector('[data-k="' + t[0] + '"]').setAttribute("aria-selected", t[0] === key);
+    });
+    // skrol do danas tek kad je Gant vidljiv (skriveni element nema širinu)
+    if (key === "gantt" && ganttScroll && !ganttScrolled) { ganttScroll(); ganttScrolled = true; }
+  }
+  tabs.forEach(function (t) {
+    var b = el("button", { role: "tab", "data-k": t[0], type: "button" }, t[1]);
+    b.addEventListener("click", function () { select(t[0]); });
+    nav.appendChild(b);
+  });
+  if (tabs.length < 2) nav.hidden = true;
+
+  // gant
+  function renderGantt() {
+    var box = document.getElementById("gantt");
+    var dated = D.tasks.filter(function (t) { return t.start && t.end; });
+    var all = [];
+    dated.forEach(function (t) { all.push(parse(t.start), parse(t.end)); });
+    D.milestones.forEach(function (m) { all.push(parse(m.date)); });
+    var today = parse(D.today);
+    all.push(today);
+    var lo = new Date(Math.min.apply(null, all)), hi = new Date(Math.max.apply(null, all));
+    lo = addDays(lo, -3); lo = addDays(lo, -((lo.getDay() + 6) % 7));
+    hi = addDays(hi, 7);
+    var n = days(lo, hi) + 1;
+    var ppd = n <= 70 ? 30 : (n <= 180 ? 14 : 6);
+    var width = n * ppd;
+    var x = function (d) { return days(lo, d) * ppd; };
+
+    var grid = el("div", { class: "g-grid", style: "width:" + (width + 240) + "px" });
+    var head = el("div", { class: "g-row g-head" });
+    head.appendChild(el("div", { class: "g-label" }, "ZADATAK"));
+    var htrack = el("div", { class: "g-track", style: "width:" + width + "px" });
+    for (var i = 0; i < n; i++) {
+      var d = addDays(lo, i);
+      if (d.getDate() === 1 || i === 0) {
+        htrack.appendChild(el("div", { class: "g-month", style: "left:" + x(d) + "px" },
+          MONTHS[d.getMonth()] + " " + d.getFullYear()));
+      }
+      if (ppd >= 14 || d.getDay() === 1) {
+        var we = d.getDay() === 0 || d.getDay() === 6;
+        var lbl = ppd >= 30 ? WD[d.getDay()] + " " + d.getDate() : String(d.getDate());
+        htrack.appendChild(el("div", {
+          class: "g-day" + (+d === +today ? " today" : "") + (we ? " we" : ""),
+          style: "left:" + x(d) + "px;width:" + (ppd >= 14 ? ppd : ppd * 7) + "px"
+        }, lbl));
+      }
+    }
+    head.appendChild(htrack);
+    grid.appendChild(head);
+
+    function track() {
+      var t = el("div", { class: "g-track", style: "width:" + width + "px" });
+      for (var i = 0; i < n; i++) {
+        var d = addDays(lo, i);
+        if (ppd >= 14 && (d.getDay() === 0 || d.getDay() === 6)) {
+          t.appendChild(el("div", { class: "g-we", style: "left:" + x(d) + "px;width:" + ppd + "px" }));
+        }
+        if (d.getDay() === 1) t.appendChild(el("div", { class: "g-vline", style: "left:" + x(d) + "px" }));
+      }
+      if (today >= lo && today <= hi) {
+        t.appendChild(el("div", { class: "g-today", style: "left:" + (x(today) + ppd / 2 - 1) + "px" }));
+      }
+      return t;
+    }
+
+    if (D.milestones.length) {
+      var mrow = el("div", { class: "g-row" });
+      mrow.appendChild(el("div", { class: "g-label faint" }, "Milestone-i"));
+      var mt = track();
+      D.milestones.forEach(function (m) {
+        var mx = x(parse(m.date)) + ppd / 2;
+        mt.appendChild(el("div", { class: "g-ms" + (m.done ? " done" : ""), style: "left:" + (mx - 7) + "px",
+          title: m.name + " · " + fmt(m.date) }));
+        mt.appendChild(el("div", { class: "g-msname", style: "left:" + (mx + 12) + "px" }, m.name));
+      });
+      mrow.appendChild(mt);
+      grid.appendChild(mrow);
+    }
+
+    D.tasks.forEach(function (t) {
+      var row = el("div", { class: "g-row" });
+      var label = el("div", { class: "g-label" + (t.done ? " done" : ""), title: t.title,
+        style: "padding-left:" + (14 + t.depth * 16) + "px" });
+      label.appendChild(el("span", { class: "dot", style: "background:" + t.status_color }));
+      label.appendChild(el(t.depth === 0 ? "b" : "span", { class: "t" }, t.title));
+      row.appendChild(label);
+      var tr = track();
+      if (t.start && t.end) {
+        var s = parse(t.start), e = parse(t.end);
+        var left = x(s), w = Math.max(days(s, e) + 1, 1) * ppd;
+        var cls = "g-bar" + (t.parent ? " parent" : "") + (t.done ? " done" : "") + (t.overdue ? " late" : "");
+        var bar = el("div", { class: cls, style: "left:" + left + "px;width:" + w + "px",
+          title: t.title + "\n" + fmt(t.start) + " – " + fmt(t.end) + "\n" + t.progress + "%" });
+        bar.appendChild(el("i", { style: "width:" + t.progress + "%" }));
+        tr.appendChild(bar);
+        tr.appendChild(el("div", { class: "g-name", style: "left:" + (left + w + 8) + "px" }, t.title));
+      }
+      row.appendChild(tr);
+      grid.appendChild(row);
+    });
+    box.appendChild(grid);
+    ganttScroll = function () {
+      var label = box.querySelector(".g-label");
+      var visible = box.clientWidth - (label ? label.offsetWidth : 0);
+      box.scrollLeft = Math.max(0, x(today) - Math.min(120, visible / 3));
+    };
+  }
+  var ganttScroll = null, ganttScrolled = false;
+
+  // lista
+  function renderList() {
+    var table = document.getElementById("list");
+    var thead = el("thead"), tr = el("tr");
+    ["Zadatak", "Status", "Prioritet", "Početak", "Rok", "Progres"].forEach(function (h) { tr.appendChild(el("th", null, h)); });
+    thead.appendChild(tr);
+    table.appendChild(thead);
+    var tb = el("tbody");
+    D.tasks.forEach(function (t) {
+      var r = el("tr");
+      var name = el("td", { class: t.depth ? "indent" + Math.min(t.depth, 3) : "" });
+      name.appendChild(el(t.depth === 0 ? "b" : "span", { class: t.done ? "faint" : "" }, t.title));
+      r.appendChild(name);
+      var st = el("td"); st.appendChild(pill(t.status, t.status_color)); r.appendChild(st);
+      var pr = el("td"); pr.appendChild(pill(t.priority, t.priority_color)); r.appendChild(pr);
+      r.appendChild(el("td", { class: "muted" }, fmt(t.start)));
+      r.appendChild(el("td", { class: t.overdue ? "late" : "muted" }, fmt(t.end)));
+      var pg = el("td"), mini = el("div", { class: "mini" }), bar = el("div", { class: "bar" });
+      bar.appendChild(el("i", { style: "width:" + t.progress + "%" + (t.done ? ";background:var(--ok)" : "") }));
+      mini.appendChild(bar); mini.appendChild(el("span", { class: "muted" }, t.progress + "%"));
+      pg.appendChild(mini); r.appendChild(pg);
+      tb.appendChild(r);
+    });
+    if (!D.tasks.length) {
+      var e = el("tr"); e.appendChild(el("td", { colspan: "6", class: "muted" }, "Još nema zadataka."));
+      tb.appendChild(e);
+    }
+    table.appendChild(tb);
+  }
+
+  // budžet
+  function renderBudget() {
+    var B = D.budget, box = document.getElementById("panel-budget");
+    var k = el("div", { class: "kpis" });
+    [["BUDŽET", B.planned, ""], ["POTROŠENO", B.spent, B.state === "over" ? "over" : (B.state === "warn" ? "warn" : "")],
+     ["PREOSTALO", B.remaining, B.state === "over" ? "over" : ""], ["ISKORIŠĆENO", B.percent + "%", ""]].forEach(function (x) {
+      var c = el("div", { class: "card kpi" });
+      c.appendChild(el("small", null, x[0]));
+      c.appendChild(el("strong", { class: x[2] }, x[1]));
+      k.appendChild(c);
+    });
+    box.appendChild(k);
+    var wrap = el("div", { class: "card table-wrap" }), t = el("table"), hr = el("tr");
+    ["Kategorija", "Planirano", "Potrošeno", ""].forEach(function (h) { hr.appendChild(el("th", null, h)); });
+    var th = el("thead"); th.appendChild(hr); t.appendChild(th);
+    var tb = el("tbody");
+    B.lines.forEach(function (l) {
+      var r = el("tr");
+      var n = el("td"); n.appendChild(pill(l.name, l.color)); r.appendChild(n);
+      r.appendChild(el("td", null, l.planned));
+      r.appendChild(el("td", { class: l.state === "over" || l.state === "unplanned" ? "over" : (l.state === "warn" ? "warn" : "") }, l.spent));
+      var pg = el("td"), mini = el("div", { class: "mini" }), bar = el("div", { class: "bar" });
+      var color = l.state === "over" ? "var(--danger)" : (l.state === "warn" ? "var(--warn)" : "var(--accent)");
+      bar.appendChild(el("i", { style: "width:" + Math.min(l.percent, 100) + "%;background:" + color }));
+      mini.appendChild(bar); mini.appendChild(el("span", { class: "muted" }, l.percent + "%"));
+      pg.appendChild(mini); r.appendChild(pg);
+      tb.appendChild(r);
+    });
+    t.appendChild(tb); wrap.appendChild(t); box.appendChild(wrap);
+  }
+
+  if (D.show.gantt) renderGantt();
+  if (D.show.list) renderList();
+  if (D.show.budget && D.budget) renderBudget();
+  if (tabs.length) select(tabs[0][0]);
+
+  // komentari
+  var taskSel = document.getElementById("task");
+  var titles = {};
+  D.tasks.forEach(function (t) {
+    titles[t.id] = t.title;
+    taskSel.appendChild(el("option", { value: t.id }, (t.depth ? " ".repeat(t.depth) : "") + t.title));
+  });
+  var list = document.getElementById("clist"), msg = document.getElementById("cmsg");
+  var authorInput = document.getElementById("author");
+  try { authorInput.value = localStorage.getItem("etapa_author") || ""; } catch (e) {}
+
+  function showComments(items) {
+    list.textContent = "";
+    if (!items.length) { list.appendChild(el("li", { class: "muted" }, "Još nema komentara.")); return; }
+    items.slice().reverse().forEach(function (c) {
+      var li = el("li"), who = el("div", { class: "who" });
+      who.appendChild(el("b", null, c.author || "Gost"));
+      var when = new Date(c.posted_at);
+      var extra = " · " + when.toLocaleDateString("sr-Latn-RS") + " " +
+        when.toLocaleTimeString("sr-Latn-RS", { hour: "2-digit", minute: "2-digit" });
+      if (c.task_id && titles[c.task_id]) extra += " · " + titles[c.task_id];
+      who.appendChild(document.createTextNode(extra));
+      li.appendChild(who);
+      li.appendChild(el("div", { class: "txt" }, c.text));
+      list.appendChild(li);
+    });
+  }
+  function load() {
+    if (!token) return;
+    fetch("/api/comments/" + token, { credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : { comments: [] }; })
+      .then(function (d) { showComments(d.comments || []); })
+      .catch(function () { list.textContent = ""; });
+  }
+  document.getElementById("cform").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var btn = document.getElementById("sendbtn");
+    var text = document.getElementById("text");
+    if (!text.value.trim()) return;
+    btn.disabled = true; msg.textContent = "Šaljem…"; msg.className = "msg muted";
+    try { localStorage.setItem("etapa_author", authorInput.value.trim()); } catch (e) {}
+    fetch("/api/comments/" + token, {
+      method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ author: authorInput.value.trim(), text: text.value, task_id: taskSel.value || null })
+    }).then(function (r) { return r.json().then(function (d) { return [r.ok, d]; }); })
+      .then(function (res) {
+        if (res[0]) { text.value = ""; msg.textContent = "Hvala, komentar je poslat."; msg.className = "msg"; load(); }
+        else { msg.textContent = res[1].error || "Slanje nije uspelo."; msg.className = "msg late"; }
+      })
+      .catch(function () { msg.textContent = "Nema veze sa internetom. Pokušaj ponovo."; msg.className = "msg late"; })
+      .then(function () { btn.disabled = false; });
+  });
+  load();
+})();
+</script>
+</body>
+</html>
