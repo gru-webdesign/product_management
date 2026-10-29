@@ -127,7 +127,7 @@ def test_edit_dialog_mark_done_and_dependency(window, qtbot):
         rid = review.id
     dlg = TaskDialog(window.ctx, rid, window)
     qtbot.addWidget(dlg)
-    assert dlg.tabs.count() == 5
+    assert dlg.tabs.count() == 6
     assert dlg.deps_list.count() == 1  # čeka na Vizuelni dizajn
     dlg.note_edit.setText("Poslat mejl klijentu")
     dlg._add_note()
@@ -137,3 +137,34 @@ def test_edit_dialog_mark_done_and_dependency(window, qtbot):
     with window.db.session() as s:
         t = task_service.get(s, rid)
         assert t.status == TaskStatus.DONE and t.progress == 100
+
+
+def test_time_tab_and_status_bar_timer(window, qtbot):
+    from app.services import timetracking as tt
+
+    with window.db.session() as s:
+        tid = next(
+            t.id
+            for t, _ in task_service.tree(s, window.ctx.project_id)
+            if t.title == "Izrada sajta"
+        )
+    dlg = TaskDialog(window.ctx, tid, window)
+    qtbot.addWidget(dlg)
+    assert dlg.timer_button.text() == "Pokreni tajmer"
+    dlg.time_hours.setValue(1.5)
+    dlg.time_note.setText("postavka")
+    dlg._add_time()
+    assert "1 h 30 min" in dlg.time_total.text()
+    assert not dlg.actual.isEnabled() and dlg.actual.value() == 1.5
+    dlg._toggle_timer()
+    assert dlg.timer_button.text() == "Zaustavi tajmer"
+    assert window.timer_widget.isVisibleTo(window)
+    assert window.timer_widget.title.text() == "Izrada sajta"
+    dlg._save()  # čuvanje ne prepisuje utrošeno sate iz unosa
+    with window.db.session() as s:
+        assert task_service.get(s, tid).actual_hours == 1.5
+        assert tt.running(s).task_id == tid
+    from app.ui.widgets.timer_widget import stop_timer
+
+    stop_timer(window.ctx, window)  # kraće od minuta: ne upisuje se
+    assert not window.timer_widget.isVisibleTo(window)

@@ -403,6 +403,13 @@ class ListView(ProjectView):
                 "Dodaj podzadatak…",
                 lambda: open_new_task(self.ctx, self.window(), parent_id=tid),
             )
+            from app.ui.widgets.timer_widget import start_timer
+
+            menu.addAction(
+                icons.icon("play"),
+                "Pokreni tajmer",
+                lambda: start_timer(self.ctx, tid, self.window()),
+            )
             status_menu = menu.addMenu("Status")
             for st, label in TASK_STATUS.items():
                 status_menu.addAction(label, lambda st=st: self.set_status(st))

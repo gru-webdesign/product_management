@@ -395,3 +395,16 @@ class ActivityLog(IdMixin, Base):
     field: Mapped[str] = mapped_column(String(60), default="")
     old_value: Mapped[str] = mapped_column(Text, default="")
     new_value: Mapped[str] = mapped_column(Text, default="")
+
+
+# --- Šabloni projekata ---------------------------------------------------------------------------
+
+
+class ProjectTemplate(IdMixin, TimestampMixin, Base):
+    """Šablon koji je korisnik sačuvao iz projekta. Ugrađeni šabloni su u kodu (services)."""
+
+    __tablename__ = "project_templates"
+
+    name: Mapped[str] = mapped_column(String(200), unique=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    data: Mapped[str] = mapped_column(Text)  # JSON: zadaci, zavisnosti, milestone-i, budžet

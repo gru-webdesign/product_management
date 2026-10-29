@@ -189,6 +189,10 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
         self.statusBar().showMessage(f"Baza: {db.paths.db_path}")
+        from app.ui.widgets.timer_widget import TimerWidget
+
+        self.timer_widget = TimerWidget(self.ctx)
+        self.statusBar().addPermanentWidget(self.timer_widget)
         self.ctx.message.connect(lambda m: self.statusBar().showMessage(m, 6000))
         self.ctx.project_changed.connect(self._project_changed)
         self.ctx.data_changed.connect(self.header.reload)

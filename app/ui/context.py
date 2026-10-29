@@ -25,6 +25,8 @@ class AppContext(QObject):
     search_changed = Signal(str)
     message = Signal(str)  # kratka poruka za statusnu traku
     open_task_requested = Signal(str)
+    timer_changed = Signal()
+    show_dashboard = Signal()
 
     def __init__(self, db: Database) -> None:
         super().__init__()

@@ -96,6 +96,7 @@ class TaskDialog(QDialog):
         if task_id:
             self.tabs.addTab(self._notes_tab(), "Beleške")
             self.tabs.addTab(self._deps_tab(), "Zavisnosti")
+            self.tabs.addTab(self._time_tab(), "Vreme")
             self.tabs.addTab(self._comments_tab(), "Komentari")
             self.tabs.addTab(self._history_tab(), "Istorija")
         root.addWidget(self.tabs, 1)
@@ -146,6 +147,7 @@ class TaskDialog(QDialog):
             "planned_cost_minor": task.planned_cost_minor,
             "parent_id": task.parent_id,
             "tags": [t.name for t in task.tags],
+            "has_time": bool(task.time_entries),
         }
 
     def _details_tab(self, data, defaults) -> QWidget:
@@ -183,6 +185,10 @@ class TaskDialog(QDialog):
         self.estimate.setValue(d.get("estimate_hours") or 0)
         self.actual = _hours_spin()
         self.actual.setValue(d.get("actual_hours") or 0)
+        self._has_time = bool(d.get("has_time"))
+        if self._has_time:
+            self.actual.setEnabled(False)
+            self.actual.setToolTip("Zbir unosa iz taba Vreme")
         row2 = QHBoxLayout()
         row2.setSpacing(8)
         row2.addWidget(self.estimate, 1)
@@ -309,6 +315,117 @@ class TaskDialog(QDialog):
         lay.addWidget(self.comments)
         return w
 
+    def _time_tab(self) -> QWidget:
+        from app.services import timetracking as tt
+        from app.ui.widgets.fields import date_edit
+
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(4, 12, 4, 4)
+        top = QHBoxLayout()
+        self.timer_button = QPushButton()
+        self.timer_button.clicked.connect(self._toggle_timer)
+        top.addWidget(self.timer_button)
+        top.addStretch(1)
+        self.time_total = QLabel()
+        self.time_total.setProperty("muted", True)
+        top.addWidget(self.time_total)
+        lay.addLayout(top)
+
+        self.time_list = QListWidget()
+        self.time_list.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
+        from PySide6.QtGui import QAction
+
+        remove = QAction("Obriši unos", self.time_list)
+        remove.triggered.connect(self._delete_time)
+        self.time_list.addAction(remove)
+        lay.addWidget(self.time_list, 1)
+
+        add_row = QHBoxLayout()
+        self.time_date = date_edit()
+        self.time_hours = QDoubleSpinBox()
+        self.time_hours.setRange(0, 24)
+        self.time_hours.setDecimals(2)
+        self.time_hours.setSingleStep(0.25)
+        self.time_hours.setSuffix(" h")
+        self.time_note = QLineEdit()
+        self.time_note.setPlaceholderText("Šta je rađeno (opciono)")
+        add = QPushButton("Dodaj")
+        add.clicked.connect(self._add_time)
+        add_row.addWidget(self.time_date)
+        add_row.addWidget(self.time_hours)
+        add_row.addWidget(self.time_note, 1)
+        add_row.addWidget(add)
+        lay.addLayout(add_row)
+        hint = QLabel(
+            "Sati se sabiraju u „Utrošeno“, a u budžetu se vrednuju po satnici iz podešavanja."
+        )
+        hint.setWordWrap(True)
+        hint.setProperty("faint", True)
+        lay.addWidget(hint)
+        self._tt = tt
+        self._load_time()
+        return w
+
+    def _load_time(self) -> None:
+        tt = self._tt
+        self.time_list.clear()
+        with self.ctx.session() as s:
+            rows = [(e.id, e.date, e.hours, e.note) for e in tt.entries(s, self.task_id)]
+            total = tt.total_hours(s, self.task_id)
+            running = tt.running(s)
+        mono = theme.mono(self.time_list.font())
+        for eid, day, hours, note in rows:
+            item = QListWidgetItem(
+                f"{day.strftime('%d.%m.%Y.')}   {tt.format_hours(hours):>12}   {note}"
+            )
+            item.setData(ROLE_ID, eid)
+            item.setFont(mono)
+            self.time_list.addItem(item)
+        if not rows:
+            empty = QListWidgetItem("Još nema upisanog vremena.")
+            empty.setFlags(Qt.ItemFlag.NoItemFlags)
+            self.time_list.addItem(empty)
+        self.time_total.setText(f"Ukupno: {tt.format_hours(total)}" if total else "")
+        on_this = running is not None and running.task_id == self.task_id
+        self.timer_button.setText("Zaustavi tajmer" if on_this else "Pokreni tajmer")
+        self.timer_button.setIcon(icons.icon("stop" if on_this else "play"))
+        if self._has_time or rows:
+            self._has_time = True
+            self.actual.setEnabled(False)
+            self.actual.setValue(total)
+
+    def _toggle_timer(self) -> None:
+        from app.ui.widgets.timer_widget import start_timer, stop_timer
+
+        with self.ctx.session() as s:
+            running = self._tt.running(s)
+        if running is not None and running.task_id == self.task_id:
+            stop_timer(self.ctx, self)
+        else:
+            start_timer(self.ctx, self.task_id, self)
+        self._load_time()
+
+    def _add_time(self) -> None:
+        from app.ui.widgets.fields import from_qdate
+
+        day, hours = from_qdate(self.time_date.date()), self.time_hours.value()
+        note = self.time_note.text()
+        if self.ctx.run(lambda s: self._tt.add_entry(s, self.task_id, day, hours, note), self):
+            self.time_hours.setValue(0)
+            self.time_note.clear()
+            self._load_time()
+
+    def _delete_time(self) -> None:
+        item = self.time_list.currentItem()
+        eid = item.data(ROLE_ID) if item else None
+        if not eid:
+            return
+        from app.db.models import TimeEntry
+
+        self.ctx.run(lambda s: self._tt.delete_entry(s, s.get(TimeEntry, eid)), self)
+        self._load_time()
+
     def _history_tab(self) -> QWidget:
         w = QWidget()
         lay = QVBoxLayout(w)
@@ -345,7 +462,7 @@ class TaskDialog(QDialog):
             "start_date": self.start.value(),
             "due_date": self.due.value(),
             "estimate_hours": self.estimate.value() or None,
-            "actual_hours": self.actual.value() or None,
+            **({} if self._has_time else {"actual_hours": self.actual.value() or None}),
             "progress": self.progress.value(),
             "planned_cost_minor": self.cost.value_minor() if self.cost.is_valid() else -1,
             "parent_id": self.parent_combo.currentData(),

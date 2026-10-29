@@ -210,6 +210,13 @@ class GanttView(ProjectView):
         menu.addAction(
             icons.icon("edit"), "Otvori…", lambda: open_task(self.ctx, task_id, self.window())
         )
+        from app.ui.widgets.timer_widget import start_timer
+
+        menu.addAction(
+            icons.icon("play"),
+            "Pokreni tajmer",
+            lambda: start_timer(self.ctx, task_id, self.window()),
+        )
         status = menu.addMenu("Status")
         for st, label in TASK_STATUS.items():
             status.addAction(

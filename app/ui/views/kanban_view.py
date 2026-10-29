@@ -367,6 +367,11 @@ class KanbanView(ProjectView):
         menu.addAction(
             icons.icon("edit"), "Otvori…", lambda: open_task(self.ctx, tid, self.window())
         )
+        from app.ui.widgets.timer_widget import start_timer
+
+        menu.addAction(
+            icons.icon("play"), "Pokreni tajmer", lambda: start_timer(self.ctx, tid, self.window())
+        )
         move = menu.addMenu("Premesti u")
         for st, label in TASK_STATUS.items():
             if st != lst.status:
