@@ -252,7 +252,10 @@ class MainWindow(QMainWindow):
         self._action(file_menu, "Novi projekat", "Ctrl+Shift+N", self.sidebar.new_project)
         self._action(file_menu, "Novi zadatak", "Ctrl+N", self.new_task)
         file_menu.addSeparator()
-        self._action(file_menu, "Izvezi zadatke u CSV…", "Ctrl+E", self.export_csv)
+        export_menu = file_menu.addMenu(icons.icon("download"), "Izvezi")
+        self._action(export_menu, "PDF izveštaj…", "Ctrl+P", self.export_pdf)
+        self._action(export_menu, "Projekat u Excel…", "Ctrl+Shift+X", self.export_xlsx)
+        self._action(export_menu, "Zadaci ili troškovi u CSV…", "Ctrl+E", self.export_csv)
         self._action(file_menu, "Otvori folder sa podacima", None, self.open_data_folder)
         self._action(file_menu, "Vrati bazu iz kopije…", None, self.restore_backup)
         file_menu.addSeparator()
@@ -361,6 +364,9 @@ class MainWindow(QMainWindow):
             ("Delete", "Obriši izabrano (Lista, zavisnost na Gantu)"),
             ("Ctrl+točkić", "Zum na Gantu"),
             ("Shift+točkić", "Skrol levo-desno na Gantu"),
+            ("Ctrl+0", "Pregled svih projekata"),
+            ("Ctrl+P", "PDF izveštaj"),
+            ("Ctrl+Shift+X", "Izvoz u Excel"),
             ("Ctrl+E", "Izvoz u CSV"),
             ("Ctrl+Shift+S", "Podeli linkom"),
             ("Ctrl+,", "Podešavanja"),
@@ -418,6 +424,16 @@ class MainWindow(QMainWindow):
         from app.ui.export import export_tasks_dialog
 
         export_tasks_dialog(self.ctx, self)
+
+    def export_xlsx(self) -> None:
+        from app.ui.export import export_xlsx_dialog
+
+        export_xlsx_dialog(self.ctx, self)
+
+    def export_pdf(self) -> None:
+        from app.ui.export import export_pdf_dialog
+
+        export_pdf_dialog(self.ctx, self)
 
     # --- deljenje u pozadini ---------------------------------------------------------------------
 

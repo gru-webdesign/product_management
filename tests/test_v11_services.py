@@ -119,3 +119,21 @@ def test_export_xlsx(session, tmp_path):
     assert any(r[2] == 1.5 for r in wb["Vreme"].iter_rows(min_row=2, values_only=True))
     costs = list(wb["Troškovi i prihodi"].iter_rows(min_row=2, values_only=True))
     assert any(r[1] == "Prihod" and r[8] == 120000 for r in costs)
+
+
+def test_pdf_report(qtbot, session, tmp_path):
+    from datetime import date
+
+    from app.ui.report import build_html, gantt_image, write_pdf
+    from scripts.seed_demo import seed
+
+    p = seed(session, today=date(2026, 10, 29))
+    session.commit()
+    image = gantt_image(session, p.id)
+    assert image is not None and image.width() > 600
+    html = build_html(session, p.id, True)
+    assert "Vizuelni dizajn" in html and "Budžet po kategorijama" in html
+    assert "—" not in html and "–" not in html
+    path = write_pdf(session, p.id, tmp_path / "r.pdf")
+    data = path.read_bytes()
+    assert data.startswith(b"%PDF") and len(data) > 10_000

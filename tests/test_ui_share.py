@@ -199,3 +199,27 @@ def test_csv_export(setup, tmp_path):
     target = tmp_path / "x.csv"
     export_csv.write(target, text)
     assert target.read_bytes().startswith(b"\xef\xbb\xbf")  # BOM za Excel
+
+
+def test_export_dialogs(setup, tmp_path, monkeypatch):
+    from PySide6.QtWidgets import QFileDialog
+
+    from app.ui import export
+
+    w, _ = setup
+    answers = iter(
+        [
+            (str(tmp_path / "izvestaj"), "PDF (*.pdf)"),
+            (str(tmp_path / "projekat.xlsx"), ""),
+            (str(tmp_path / "troskovi"), "Troškovi i prihodi (*.csv)"),
+            ("", ""),
+        ]
+    )
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", lambda *a, **k: next(answers))
+    pdf = export.export_pdf_dialog(w.ctx, w)
+    assert pdf == tmp_path / "izvestaj.pdf" and pdf.read_bytes().startswith(b"%PDF")
+    xlsx = export.export_xlsx_dialog(w.ctx, w)
+    assert xlsx.exists() and xlsx.stat().st_size > 0
+    csv_path = export.export_tasks_dialog(w.ctx, w)
+    assert "Figma" in csv_path.read_text(encoding="utf-8-sig")
+    assert export.export_pdf_dialog(w.ctx, w) is None  # otkazano

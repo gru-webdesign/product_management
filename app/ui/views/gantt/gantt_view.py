@@ -34,6 +34,46 @@ from app.ui.views.gantt.model import DepData, MilestoneData, RowData
 ZOOM_ORDER = list(ZOOMS)  # day, week, month
 
 
+def load_chart_data(session, project_id: str, f: TaskFilter | None = None):
+    """Podaci za Gant (koristi ih i PDF izveštaj): redovi, milestone-i, zavisnosti, datumi."""
+    from app.services import projects as project_service
+
+    f = f or TaskFilter()
+    today = date.today()
+    tree = task_service.tree(session, project_id)
+    parents = {t.parent_id for t, _ in tree if t.parent_id}
+    rows = [
+        RowData(
+            task_id=t.id,
+            title=t.title,
+            depth=depth,
+            start=t.start_date or t.due_date,
+            end=t.due_date or t.start_date,
+            progress=100 if t.status == TaskStatus.DONE else t.progress,
+            status=t.status,
+            priority=t.priority,
+            has_children=t.id in parents,
+            overdue=is_overdue(t, today),
+            cost_minor=t.planned_cost_minor,
+        )
+        for t, depth in tree
+        if task_service.matches(t, f, today)
+    ]
+    shown = {r.task_id for r in rows}
+    milestones = [
+        MilestoneData(m.id, m.name, m.date, m.done)
+        for m in ms_service.for_project(session, project_id)
+    ]
+    deps = [
+        DepData(d.id, d.predecessor_id, d.successor_id, d.type, d.lag_days)
+        for d in dep_service.for_project(session, project_id)
+        if d.predecessor_id in shown and d.successor_id in shown
+    ]
+    p = project_service.get(session, project_id)
+    extra = [d for d in (p.start_date, p.end_date) if d] if p else []
+    return rows, milestones, deps, extra
+
+
 class GanttView(ProjectView):
     def __init__(self, ctx, parent=None) -> None:
         super().__init__(ctx, parent)
@@ -107,41 +147,8 @@ class GanttView(ProjectView):
 
     def reload(self) -> None:
         f = TaskFilter(search=self.ctx.search, hide_done=not self.show_done.isChecked())
-        today = date.today()
         with self.ctx.session() as s:
-            tree = task_service.tree(s, self.ctx.project_id)
-            parents = {t.parent_id for t, _ in tree if t.parent_id}
-            rows = [
-                RowData(
-                    task_id=t.id,
-                    title=t.title,
-                    depth=depth,
-                    start=t.start_date or t.due_date,
-                    end=t.due_date or t.start_date,
-                    progress=100 if t.status == TaskStatus.DONE else t.progress,
-                    status=t.status,
-                    priority=t.priority,
-                    has_children=t.id in parents,
-                    overdue=is_overdue(t, today),
-                    cost_minor=t.planned_cost_minor,
-                )
-                for t, depth in tree
-                if task_service.matches(t, f, today)
-            ]
-            shown = {r.task_id for r in rows}
-            milestones = [
-                MilestoneData(m.id, m.name, m.date, m.done)
-                for m in ms_service.for_project(s, self.ctx.project_id)
-            ]
-            deps = [
-                DepData(d.id, d.predecessor_id, d.successor_id, d.type, d.lag_days)
-                for d in dep_service.for_project(s, self.ctx.project_id)
-                if d.predecessor_id in shown and d.successor_id in shown
-            ]
-            from app.services import projects as project_service
-
-            p = project_service.get(s, self.ctx.project_id)
-            extra = [d for d in (p.start_date, p.end_date) if d] if p else []
+            rows, milestones, deps, extra = load_chart_data(s, self.ctx.project_id, f)
         self.chart.set_data(rows, milestones, deps, self.zoom, self.show_cost.isChecked(), extra)
 
     def _theme_changed(self) -> None:

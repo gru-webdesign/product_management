@@ -350,7 +350,8 @@ class GanttChart(QGraphicsView):
             p.setPen(QPen(QColor(t.accent), 1.6, Qt.PenStyle.DashLine))
             p.drawLine(self._link_from.handle_center(), self._link_to)
         p.save()
-        p.resetTransform()
+        # Poništi samo transformaciju pogleda (skrol), a zadrži spoljnu (npr. uvećanje za PDF).
+        p.setTransform(self.viewportTransform().inverted()[0], True)
         self._paint_left(p)
         self._paint_header(p)
         self._paint_hint(p)
