@@ -91,9 +91,12 @@ class ProgressDelegate(_Base):
     """Kolona sa trakom progresa; vrednost (0–100) iz UserRole+1."""
 
     VALUE_ROLE = Qt.ItemDataRole.UserRole + 1
+    COLOR_ROLE = Qt.ItemDataRole.UserRole + 3
 
     def paint(self, p, option, index) -> None:
         self.paint_background(p, option, index)
         value = index.data(self.VALUE_ROLE)
         if value is not None:
-            draw_progress(p, option.rect.adjusted(8, 0, -6, 0), int(value))
+            draw_progress(
+                p, option.rect.adjusted(8, 0, -6, 0), int(value), index.data(self.COLOR_ROLE)
+            )

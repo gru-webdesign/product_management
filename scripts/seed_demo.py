@@ -22,9 +22,7 @@ from sqlalchemy.orm import Session  # noqa: E402
 from app.db.models import (  # noqa: E402
     Budget,
     BudgetCategory,
-    CostEntry,
     DependencyType,
-    IncomeEntry,
     Milestone,
     Note,
     Priority,
@@ -35,7 +33,7 @@ from app.db.models import (  # noqa: E402
     TaskDependency,
     TaskStatus,
 )
-from app.services.money import to_base_minor, to_minor  # noqa: E402
+from app.services.money import to_minor  # noqa: E402
 
 DEMO_NAME = "Redizajn sajta — demo"
 
@@ -194,21 +192,20 @@ def seed(session: Session, today: date | None = None) -> Project:
                 Budget(project=project, category=categories[name], planned_minor=to_minor(amount))
             )
 
+    from app.services import budget as budget_service
+
     def cost(day, amount, category, vendor, currency="RSD", rate="1", t=None, note=""):
-        minor = to_minor(amount)
-        session.add(
-            CostEntry(
-                project=project,
-                task=t,
-                category=categories[category],
-                date=d(day),
-                amount_minor=minor,
-                currency=currency,
-                exchange_rate=Decimal(rate),
-                amount_base_minor=to_base_minor(minor, rate),
-                vendor=vendor,
-                note=note,
-            )
+        budget_service.add_cost(
+            session,
+            project.id,
+            on=d(day),
+            amount_minor=to_minor(amount),
+            category_id=categories[category].id,
+            currency=currency,
+            rate=Decimal(rate),
+            task_id=t.id if t else None,
+            vendor=vendor,
+            note=note,
         )
 
     cost(-8, 45000, "Rad", "Sopstveni rad", t=brief, note="Sastanci i brief")
@@ -217,17 +214,8 @@ def seed(session: Session, today: date | None = None) -> Project:
         -1, 89, "Softver i licence", "Figma", currency="EUR", rate="117.2", note="Godišnja licenca"
     )
     cost(1, 9500, "Materijal", "Foto banka", t=content)
-
-    session.add(
-        IncomeEntry(
-            project=project,
-            date=d(-9),
-            amount_minor=to_minor(120000),
-            currency="RSD",
-            exchange_rate=Decimal("1"),
-            amount_base_minor=to_minor(120000),
-            description="Avans 50%",
-        )
+    budget_service.add_income(
+        session, project.id, on=d(-9), amount_minor=to_minor(120000), description="Avans 50%"
     )
     session.flush()
     return project
