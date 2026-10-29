@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Alati
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Build
+build/
+dist/
+installer/Output/
+
+# Lokalni podaci (baza se nikad ne commituje)
+*.db
+*.db-wal
+*.db-shm
+.data/
+
+# Cloudflare
+share_worker/node_modules/
+share_worker/.wrangler/
+.dev.vars
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/

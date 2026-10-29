@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Etapa: pokreni",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "app.main",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": true
+        },
+        {
+            "name": "Etapa: pokreni sa demo bazom",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "app.main",
+            "cwd": "${workspaceFolder}",
+            "env": { "ETAPA_DATA_DIR": "${workspaceFolder}/.data" },
+            "justMyCode": true
+        },
+        {
+            "name": "Demo podaci: napuni .data bazu",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/scripts/seed_demo.py",
+            "cwd": "${workspaceFolder}",
+            "env": { "ETAPA_DATA_DIR": "${workspaceFolder}/.data" }
+        }
+    ]
+}

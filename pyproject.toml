@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "etapa"
+version = "0.1.0"
+description = "Etapa — desktop aplikacija za upravljanje projektima, rokovima i budžetom"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "PySide6>=6.7",
+    "SQLAlchemy>=2.0",
+    "alembic>=1.13",
+    "Jinja2>=3.1",
+    "httpx>=0.27",
+    "keyring>=25",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-qt>=4.4",
+    "ruff>=0.6",
+]
+
+[project.gui-scripts]
+etapa = "app.main:main"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.setuptools.package-data]
+"app" = ["resources/**/*", "share/templates/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+qt_api = "pyside6"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["app/db/migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
