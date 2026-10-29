@@ -77,6 +77,7 @@ class SettingsDialog(QDialog):
             rate = int(get_setting(s, "default_hourly_rate_minor") or 0)
             warn = int(get_setting(s, "budget_warn_percent") or 80)
             mode = get_setting(s, "theme") or "system"
+            remind = get_setting(s, "reminders_enabled") != "0"
             entries = (s.scalar(select(func.count(CostEntry.id))) or 0) + (
                 s.scalar(select(func.count(IncomeEntry.id))) or 0
             )
@@ -107,6 +108,11 @@ class SettingsDialog(QDialog):
         f.addRow("Satnica", self.rate)
         f.addRow("Upozorenje budžeta", self.warn)
         f.addRow("Tema", self.theme)
+        from PySide6.QtWidgets import QCheckBox
+
+        self.remind = QCheckBox("Obaveštenja o rokovima (danas, sutra i kad kasni)")
+        self.remind.setChecked(remind)
+        f.addRow("Podsetnici", self.remind)
         hint = QLabel(
             "Satnica se koristi za procenu vrednosti rada (utrošeni sati × satnica) "
             "u pregledu budžeta."
@@ -185,6 +191,7 @@ class SettingsDialog(QDialog):
             "default_hourly_rate_minor": str(self.rate.value_minor()),
             "budget_warn_percent": str(self.warn.value()),
             "theme": self.theme.currentData(),
+            "reminders_enabled": "1" if self.remind.isChecked() else "0",
         }
         if self.base.isEnabled():
             values["base_currency"] = self.base.currentData()

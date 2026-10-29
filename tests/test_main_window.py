@@ -102,3 +102,23 @@ def test_new_project_from_template_and_save_as_template(qtbot, db, monkeypatch):
     with db.session() as s:
         names = [i.name for i in template_service.list_templates(s)]
     assert "Pekara šablon" in names
+
+
+def test_reminders_check_once_and_toggle(qtbot, db):
+    from datetime import date
+
+    from app.services import projects as ps
+    from app.services import tasks as ts
+    from app.services.defaults import set_setting
+
+    window = make_window(qtbot, db)
+    pid = window.ctx.run(lambda s: ps.create(s, name="Rok").id)
+    window.ctx.run(lambda s: ts.create(s, pid, title="Predaja", due_date=date.today()))
+    first = window.reminders.check()
+    assert [r.title for r in first] == ["Predaja"]
+    assert "rok danas: 1" in window.statusBar().currentMessage()
+    assert window.reminders.check() == []  # isti dan ne ponavlja
+    assert len(window.reminders.check(force=True)) == 1
+    window.ctx.run(lambda s: set_setting(s, "reminders_enabled", "0"))
+    window.ctx.run(lambda s: ts.create(s, pid, title="Još jedan", due_date=date.today()))
+    assert window.reminders.check() == []  # isključeno u podešavanjima

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
@@ -216,6 +218,14 @@ class MainWindow(QMainWindow):
         self._update_share_badge()
         self._restore_window()
 
+        from PySide6.QtGui import QIcon
+
+        from app.ui.reminders import ReminderManager
+
+        icon_path = Path(__file__).resolve().parents[1] / "resources" / "icons" / "app.png"
+        self.setWindowIcon(QIcon(str(icon_path)))
+        self.reminders = ReminderManager(self.ctx, self, self.windowIcon())
+
     # --- sastavljanje ----------------------------------------------------------------------------
 
     def _make_views(self) -> list[ProjectView]:
@@ -273,6 +283,9 @@ class MainWindow(QMainWindow):
 
         help_menu = bar.addMenu("Po&moć")
         self._action(help_menu, "Prečice na tastaturi", "F1", self.shortcuts)
+        self._action(
+            help_menu, "Proveri rokove sada", None, lambda: self.reminders.check(force=True)
+        )
         self._action(help_menu, f"O programu {APP_NAME}", None, self.about)
 
     def _action(self, menu, text, shortcut, slot) -> QAction:
@@ -333,6 +346,7 @@ class MainWindow(QMainWindow):
         with self.db.session() as s:
             set_setting(s, "last_project_id", pid)
             s.commit()
+        self.reminders.shutdown()
         super().closeEvent(event)
 
     def shortcuts(self) -> None:

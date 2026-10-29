@@ -71,6 +71,7 @@ def main() -> int:
         QTimer.singleShot(1500, app.quit)
     else:
         QTimer.singleShot(1500, window.sync_comments_in_background)
+        QTimer.singleShot(3000, window.reminders.check)
     code = app.exec()
     from app.ui import background
 
