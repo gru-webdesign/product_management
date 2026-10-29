@@ -1,9 +1,9 @@
 ; Inno Setup skripta za Etapa (https://jrsoftware.org/isinfo.php)
-; Pravi se iz build.ps1 posle PyInstaller-a:  ISCC.exe /DAppVersion=0.1.0 installer\setup.iss
+; Pravi se iz build.ps1 posle PyInstaller-a:  ISCC.exe /DAppVersion=1.1.0 installer\setup.iss
 ; Instalira se za trenutnog korisnika (bez administratorskih prava).
 
 #ifndef AppVersion
-  #define AppVersion "0.1.0"
+  #define AppVersion "1.1.0"
 #endif
 
 [Setup]

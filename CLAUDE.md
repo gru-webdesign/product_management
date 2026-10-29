@@ -28,22 +28,28 @@ app/
   db/models.py         sve tabele
   db/migrations/       Alembic (versions/ se ne lintuje)
   services/            poslovna logika BEZ Qt-a: projects, tasks, dependencies, milestones,
-                       gantt_math, budget, sharing, activity, backup, defaults, money, export_csv
+                       gantt_math, budget, sharing, activity, backup, defaults, money, export_csv,
+                       export_xlsx, timetracking, dashboard, templates, reminders, updates
   share/               snapshot (šta se deli), render + templates/share.html, client (Worker),
                        secrets (keyring)
   ui/
     main_window.py     sidebar + zaglavlje + tabovi, meniji, deljenje u pozadini
     context.py         AppContext: izabrani projekat, pretraga, data_changed, run()
-    theme.py, icons.py tokeni boja (svetla/tamna), QSS, sopstvene SVG ikonice
+    theme.py, icons.py tokeni boja (svetla/tamna), QSS, Geist fontovi, Phosphor ikonice
+                       (resources/icons/phosphor, boja se menja u kodu)
+    export.py          dijalozi za izvoz (CSV, Excel, PDF); report.py pravi PDF (QTextDocument)
+    reminders.py       podsetnici za rokove (sistemska traka, provera na 30 min)
     background.py      mrežni poslovi u QThreadPool-u (sopstvena sesija po poslu)
-    views/             list_view, kanban_view, budget_view, gantt/ (chart, items, model)
-    dialogs/           project, task, milestone, cost (trošak/prihod), budget, share,
-                       settings, restore
-    widgets/           fields (datum, novac, boja), paint (bedževi, trake), comments_panel
+    views/             dashboard_view, list_view, kanban_view, budget_view,
+                       gantt/ (chart, items, model; load_chart_data koristi i PDF)
+    dialogs/           project (sa šablonom), task (6 tabova, i Vreme), milestone, cost,
+                       budget, share, settings, restore, templates
+    widgets/           fields (datum, novac, boja), paint (bedževi, trake), comments_panel,
+                       timer_widget (tajmer u statusnoj traci)
 share_worker/          Cloudflare Worker (src/index.js) + Node testovi + README za postavljanje
 installer/             etapa.spec (PyInstaller), setup.iss (Inno Setup), icon.ico, launch.py
 scripts/               seed_demo.py, screenshots.py, build.ps1
-tests/                 94 testa (servisi + UI preko pytest-qt, bez prozora)
+tests/                 115 testova (servisi + UI preko pytest-qt, bez prozora)
 ```
 
 ## Pravila koda
@@ -66,6 +72,11 @@ tests/                 94 testa (servisi + UI preko pytest-qt, bez prozora)
   stavku koja još obrađuje događaj → pad aplikacije.
 - Mreža (Worker) nikad u glavnoj niti za automatske poslove: `ui/background.run(db, fn, ...)`.
 - U testovima tema se primenjuje jednom po sesiji (conftest), ne u svakom testu (sporo).
+- Signal teme (`theme.manager().changed`) vezuj za metodu objekta, ne za lambda: lambda nadživi
+  obrisan widget → RuntimeError.
+- Dizajn (v1.1): jedan akcenat kobalt `#2F55D4` (tamna `#6E8EF5`), Geist, a Geist Mono samo za
+  brojeve u kolonama; Phosphor ikonice; bez crta (— –) u vidljivom tekstu, bez VELIKIH naslova;
+  radijusi: kontrole 6, površine 10, ugnežđeno 8, pilule pune.
 - Posle svakog koraka: `ruff check . && ruff format --check . && pytest`, pa commit i
   ažuriranje sekcije „Stanje“ ispod.
 
@@ -96,9 +107,17 @@ ruff check . ; ruff format .
 - [x] Korak 14 — instaler: PyInstaller spec, Inno Setup, scripts/build.ps1 (provereno pakovanje)
 - [ ] Korak 7/15 — test korisnika na Windows-u, popravke, v1.0
 
+v1.1 (verzija 1.1.0):
+- [x] Redizajn: kobalt, Geist, Phosphor ikonice, nova ikonica aplikacije, zaglavlje projekta
+- [x] Merenje vremena: tajmer (statusna traka), ručni unos, `actual_hours` = zbir unosa
+- [x] Pregled svih projekata (Ctrl+0)
+- [x] Šabloni projekata (3 ugrađena + sopstveni), migracija 0002
+- [x] Podsetnici za rokove (sistemska traka)
+- [x] Izvoz: PDF izveštaj sa Gantom (Ctrl+P), Excel (Ctrl+Shift+X), CSV (Ctrl+E)
+- [x] Provera nove verzije (Pomoć, GitHub releases; treba objaviti Release `v1.1.0`)
+
 Šta korisnik treba sam da uradi (traži njegov nalog/računar):
 - `scripts\build.ps1` na Windows-u (treba Inno Setup 6) → instaler
 - postavljanje Worker-a na Cloudflare po `share_worker/README.md`
 
-Van v1.0 (ide u v1.1): tajmer, prilozi/slike računa, Excel/PDF, dashboard, engleski, šabloni,
-notifikacije, provera nove verzije.
+Odloženo (nije u v1.1): prilozi/slike računa, engleski jezik.

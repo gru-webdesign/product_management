@@ -289,6 +289,7 @@ class MainWindow(QMainWindow):
         self._action(
             help_menu, "Proveri rokove sada", None, lambda: self.reminders.check(force=True)
         )
+        self._action(help_menu, "Proveri novu verziju…", None, self.check_updates)
         self._action(help_menu, f"O programu {APP_NAME}", None, self.about)
 
     def _action(self, menu, text, shortcut, slot) -> QAction:
@@ -518,6 +519,39 @@ class MainWindow(QMainWindow):
         from app.services.defaults import set_setting
 
         self.ctx.run(lambda s: set_setting(s, "theme", mode))
+
+    def check_updates(self) -> None:
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices, QGuiApplication
+        from PySide6.QtWidgets import QMessageBox
+
+        from app.services import updates
+
+        QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            info = updates.check()
+        except Exception:  # bez interneta, GitHub nedostupan, ograničenje upita
+            QGuiApplication.restoreOverrideCursor()
+            QMessageBox.warning(
+                self,
+                "Nova verzija",
+                "Provera nije uspela. Proveri internet vezu i pokušaj ponovo.",
+            )
+            return
+        QGuiApplication.restoreOverrideCursor()
+        if info is None or not info.newer:
+            QMessageBox.information(
+                self, "Nova verzija", f"Imaš najnoviju verziju ({__version__})."
+            )
+            return
+        answer = QMessageBox.question(
+            self,
+            "Nova verzija",
+            f"Dostupna je verzija {info.latest}. Ti koristiš {__version__}.\n\n"
+            "Otvoriti stranicu za preuzimanje?",
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            QDesktopServices.openUrl(QUrl(info.url))
 
     def about(self) -> None:
         from PySide6.QtWidgets import QMessageBox

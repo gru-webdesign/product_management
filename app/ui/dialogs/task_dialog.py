@@ -24,6 +24,8 @@ from PySide6.QtWidgets import (
     QSlider,
     QSpinBox,
     QTabWidget,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -332,7 +334,14 @@ class TaskDialog(QDialog):
         top.addWidget(self.time_total)
         lay.addLayout(top)
 
-        self.time_list = QListWidget()
+        self.time_list = QTreeWidget()
+        self.time_list.setHeaderLabels(["Datum", "Sati", "Opis"])
+        self.time_list.setRootIsDecorated(False)
+        self.time_list.setUniformRowHeights(True)
+        head = self.time_list.header()
+        head.setStretchLastSection(True)
+        head.setSectionResizeMode(0, head.ResizeMode.ResizeToContents)
+        head.setSectionResizeMode(1, head.ResizeMode.ResizeToContents)
         self.time_list.setContextMenuPolicy(Qt.ContextMenuPolicy.ActionsContextMenu)
         from PySide6.QtGui import QAction
 
@@ -375,17 +384,18 @@ class TaskDialog(QDialog):
             total = tt.total_hours(s, self.task_id)
             running = tt.running(s)
         mono = theme.mono(self.time_list.font())
+        right = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         for eid, day, hours, note in rows:
-            item = QListWidgetItem(
-                f"{day.strftime('%d.%m.%Y.')}   {tt.format_hours(hours):>12}   {note}"
-            )
-            item.setData(ROLE_ID, eid)
-            item.setFont(mono)
-            self.time_list.addItem(item)
+            item = QTreeWidgetItem([day.strftime("%d.%m.%Y."), tt.format_hours(hours), note])
+            item.setData(0, ROLE_ID, eid)
+            item.setFont(0, mono)
+            item.setFont(1, mono)
+            item.setTextAlignment(1, right)
+            self.time_list.addTopLevelItem(item)
         if not rows:
-            empty = QListWidgetItem("Još nema upisanog vremena.")
+            empty = QTreeWidgetItem(["", "", "Još nema upisanog vremena."])
             empty.setFlags(Qt.ItemFlag.NoItemFlags)
-            self.time_list.addItem(empty)
+            self.time_list.addTopLevelItem(empty)
         self.time_total.setText(f"Ukupno: {tt.format_hours(total)}" if total else "")
         on_this = running is not None and running.task_id == self.task_id
         self.timer_button.setText("Zaustavi tajmer" if on_this else "Pokreni tajmer")
@@ -418,7 +428,7 @@ class TaskDialog(QDialog):
 
     def _delete_time(self) -> None:
         item = self.time_list.currentItem()
-        eid = item.data(ROLE_ID) if item else None
+        eid = item.data(0, ROLE_ID) if item else None
         if not eid:
             return
         from app.db.models import TimeEntry

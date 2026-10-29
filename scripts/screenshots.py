@@ -74,7 +74,7 @@ def main() -> int:
             if t.title == "Vizuelni dizajn"
         )
         design_id = design.id
-    for tab, label in ((0, "detalji"), (2, "zavisnosti")):
+    for tab, label in ((0, "detalji"), (2, "zavisnosti"), (3, "vreme")):
         dlg = TaskDialog(window.ctx, design_id, window)
         dlg.tabs.setCurrentIndex(tab)
         dlg.show()

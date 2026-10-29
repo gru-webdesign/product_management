@@ -124,15 +124,15 @@ function escapeHtml(s) {
 function simplePage(title, text, extra = "") {
   return `<!doctype html><html lang="sr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)}</title>
-<style>body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f5f5f7;color:#1c2024;
+<style>body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#FAFAFB;color:#18181C;
 display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}
-.box{background:#fff;border:1px solid #e4e4e9;border-radius:12px;padding:28px;max-width:380px;width:100%}
-h1{font-size:18px;margin:0 0 8px}p{color:#60646c;margin:0 0 16px;line-height:1.5}
-input{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #cdced6;border-radius:8px;font-size:16px}
-button{margin-top:12px;width:100%;padding:10px;border:0;border-radius:8px;background:#5b5bd6;color:#fff;
-font-weight:600;font-size:15px;cursor:pointer}.err{color:#dc3e42;margin-top:10px}
-@media (prefers-color-scheme:dark){body{background:#111113;color:#edeef0}.box{background:#18191b;border-color:#2b2d31}
-p{color:#b0b4ba}input{background:#111113;color:#edeef0;border-color:#3c3f44}}</style></head>
+.box{background:#fff;border:1px solid #E4E4E8;border-radius:10px;padding:28px;max-width:380px;width:100%}
+h1{font-size:18px;margin:0 0 8px}p{color:#5E5E68;margin:0 0 16px;line-height:1.5}
+input{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #CFCFD6;border-radius:6px;font-size:16px}
+button{margin-top:12px;width:100%;padding:10px;border:0;border-radius:6px;background:#2F55D4;color:#fff;
+font-weight:600;font-size:15px;cursor:pointer}.err{color:#D23434;margin-top:10px}
+@media (prefers-color-scheme:dark){body{background:#111114;color:#EDEDF0}.box{background:#18181C;border-color:#2A2A30}
+p{color:#A0A0AA}input{background:#111114;color:#EDEDF0;border-color:#3A3A42}button{background:#6E8EF5;color:#0E1330}}</style></head>
 <body><div class="box"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(text)}</p>${extra}</div></body></html>`;
 }
 
