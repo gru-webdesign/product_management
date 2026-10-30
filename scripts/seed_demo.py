@@ -228,7 +228,29 @@ def seed(session: Session, today: date | None = None) -> Project:
         session, project.id, on=d(-9), amount_minor=to_minor(120000), description="Avans 50%"
     )
     session.flush()
+    _demo_activity(session, project, brief, wire, design, content)
+    session.flush()
     return project
+
+
+def _demo_activity(session: Session, project: Project, brief, wire, design, content) -> None:
+    """Nekoliko izmena unazad, da Pregled i istorija imaju šta da prikažu."""
+    from datetime import UTC, datetime
+
+    from app.services import activity
+
+    now = datetime.now(UTC)
+    home = next(t for t in design.subtasks if t.title == "Početna stranica")
+    for minutes, obj, action, field, old, new in (
+        (60 * 26, brief, "update", "status", TaskStatus.REVIEW, TaskStatus.DONE),
+        (60 * 22, wire, "update", "status", TaskStatus.REVIEW, TaskStatus.DONE),
+        (60 * 5, design, "update", "status", TaskStatus.TODO, TaskStatus.IN_PROGRESS),
+        (95, content, "update", "due_date", None, content.due_date),
+        (40, home, "update", "progress", 40, 70),
+        (12, design, "update", "progress", 20, 40),
+    ):
+        entry = activity.log(session, "task", obj.id, action, project.id, field, old, new)
+        entry.created_at = now - timedelta(minutes=minutes)
 
 
 def main() -> int:

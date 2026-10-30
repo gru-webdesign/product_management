@@ -28,12 +28,14 @@ from app.services.tasks import TaskFilter, is_overdue
 from app.ui import icons, theme
 from app.ui.dialogs.task_dialog import open_task
 from app.ui.views.base import ProjectView
+from app.ui.widgets.card import paint_card
 from app.ui.widgets.paint import draw_pill, draw_progress
 
 ROLE_ID = Qt.ItemDataRole.UserRole
 ROLE_CARD = Qt.ItemDataRole.UserRole + 1
-PAD = 12
-GAP = 8
+PAD = 14
+GAP = 10
+SIDE = 5  # mesto za senku kartice levo i desno
 
 
 class CardDelegate(QStyledItemDelegate):
@@ -50,7 +52,7 @@ class CardDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option, index) -> QSize:
         card = index.data(ROLE_CARD) or {}
-        width = max(160, option.widget.viewport().width() - 4) if option.widget else 240
+        width = max(160, option.widget.viewport().width() - 2 * SIDE) if option.widget else 240
         title_font, small = self._fonts(option.font)
         h = PAD
         if card.get("parent"):
@@ -67,19 +69,17 @@ class CardDelegate(QStyledItemDelegate):
         card = index.data(ROLE_CARD) or {}
         t = theme.tokens()
         title_font, small = self._fonts(option.font)
-        rect = option.rect.adjusted(2, 0, -2, -GAP)
+        rect = option.rect.adjusted(SIDE, 1, -SIDE, -GAP)
         p.save()
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         selected = option.state & QStyle.StateFlag.State_Selected
         hover = option.state & QStyle.StateFlag.State_MouseOver
-        border = QColor(t.accent if selected else (t.border_strong if hover else t.border))
-        p.setPen(QPen(border, 1.5 if selected else 1))
-        p.setBrush(QColor(t.surface))
-        p.drawRoundedRect(QRectF(rect).adjusted(0.5, 0.5, -0.5, -0.5), 8, 8)
-        # traka prioriteta levo
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QColor(PRIORITY_COLOR[card["priority"]]))
-        p.drawRoundedRect(QRectF(rect.left() + 1, rect.top() + 10, 3, rect.height() - 20), 1.5, 1.5)
+        border = t.accent if selected else (t.border_strong if hover else t.border)
+        paint_card(p, QRectF(rect), 10, border=border, lift=1.4 if hover else 0.8)
+        if selected:
+            p.setPen(QPen(QColor(t.accent), 1.5))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawRoundedRect(QRectF(rect).adjusted(0.75, 0.75, -0.75, -0.75), 10, 10)
 
         x, y, w = rect.left() + PAD, rect.top() + PAD, rect.width() - 2 * PAD
         if card.get("parent"):
@@ -220,20 +220,27 @@ class ColumnFrame(QFrame):
         self.status = status
         self.setObjectName("KanbanFrame")
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(10, 10, 10, 10)
+        lay.setContentsMargins(8, 12, 8, 10)
         lay.setSpacing(8)
         head = QHBoxLayout()
+        head.setContentsMargins(6, 0, 6, 0)
+        head.setSpacing(8)
+        self.dot = QLabel()
+        self.dot.setFixedSize(8, 8)
         title = QLabel(TASK_STATUS[status])
         title.setProperty("heading", True)
         self.count = QLabel("0")
-        self.count.setProperty("muted", True)
+        self.count.setObjectName("KanbanCount")
+        self.count.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        head.addWidget(self.dot)
         head.addWidget(title)
-        head.addWidget(self.count)
         head.addStretch(1)
+        head.addWidget(self.count)
         lay.addLayout(head)
         self.list = KanbanColumn(status)
         lay.addWidget(self.list, 1)
         self.quick = QLineEdit()
+        self.quick.setObjectName("QuickAdd")
         self.quick.setPlaceholderText("+ Dodaj zadatak (Enter)")
         self.quick.returnPressed.connect(lambda: on_quick_add(self))
         lay.addWidget(self.quick)
@@ -246,6 +253,7 @@ class KanbanView(ProjectView):
         lay.setContentsMargins(0, 10, 0, 0)
         lay.setSpacing(8)
         bar = QHBoxLayout()
+        bar.setContentsMargins(8, 0, 8, 0)
         self.show_subtasks = QCheckBox("Prikaži podzadatke")
         self.show_subtasks.setChecked(True)
         self.show_subtasks.toggled.connect(lambda _c: self.refresh())
@@ -259,7 +267,8 @@ class KanbanView(ProjectView):
         lay.addLayout(bar)
 
         cols = QHBoxLayout()
-        cols.setSpacing(12)
+        cols.setContentsMargins(4, 0, 4, 4)
+        cols.setSpacing(14)
         self.columns: dict[TaskStatus, ColumnFrame] = {}
         for status in TaskStatus:
             frame = ColumnFrame(status, self._quick_add)
@@ -280,11 +289,22 @@ class KanbanView(ProjectView):
     def _style(self) -> None:
         t = theme.tokens()
         self.setStyleSheet(
-            f"#KanbanFrame {{ background: {t.sidebar}; border: 1px solid {t.border};"
-            f" border-radius: 10px; }}"
+            f"#KanbanFrame {{ background: {t.lane}; border: none; border-radius: 14px; }}"
             "#KanbanColumn { background: transparent; border: none; }"
             "#KanbanColumn::item { background: transparent; border: none; }"
+            f"#KanbanCount {{ background: {t.surface}; color: {t.muted}; border-radius: 9px;"
+            " padding: 1px 8px; font-size: 11px; font-weight: 600; }"
+            f"#QuickAdd {{ background: transparent; border: 1px dashed {t.border_strong}; }}"
+            f"#QuickAdd:focus {{ background: {t.surface}; border: 1px solid {t.accent}; }}"
         )
+        colors = {
+            TaskStatus.TODO: t.faint,
+            TaskStatus.IN_PROGRESS: t.accent,
+            TaskStatus.REVIEW: t.warning,
+            TaskStatus.DONE: t.success,
+        }
+        for status, frame in self.columns.items():
+            frame.dot.setStyleSheet(f"background: {colors[status]}; border-radius: 4px;")
 
     def reload(self) -> None:
         f = TaskFilter(search=self.ctx.search)

@@ -10,7 +10,7 @@ from app.db.models import BudgetCategory, Setting
 DEFAULT_SETTINGS: dict[str, str] = {
     "user_name": "",
     "base_currency": "RSD",
-    "theme": "system",  # system / light / dark
+    "theme": "dark",  # system / light / dark
     "language": "sr",
     "default_hourly_rate_minor": "0",
     "budget_warn_percent": "80",

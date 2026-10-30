@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
+from pathlib import Path
+
+from PySide6.QtCore import QRectF, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -14,17 +16,20 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QSizePolicy,
+    QStyle,
+    QStyledItemDelegate,
     QToolButton,
     QVBoxLayout,
 )
 
 from app import APP_NAME
 from app.services import projects as project_service
-from app.ui import icons
+from app.ui import icons, theme
 from app.ui.context import AppContext
 from app.ui.dialogs.project_dialog import ProjectDialog
 
 ROLE_ID = Qt.ItemDataRole.UserRole
+ICON_PATH = Path(__file__).resolve().parents[1] / "resources" / "icons" / "app-256.png"
 
 
 def color_dot(color: str, size: int = 10, faded: bool = False) -> QIcon:
@@ -43,45 +48,124 @@ def color_dot(color: str, size: int = 10, faded: bool = False) -> QIcon:
     return QIcon(px)
 
 
+ROLE_COLOR = Qt.ItemDataRole.UserRole + 1
+ROLE_PCT = Qt.ItemDataRole.UserRole + 2
+ROLE_ARCHIVED = Qt.ItemDataRole.UserRole + 3
+
+
+class ProjectDelegate(QStyledItemDelegate):
+    """Red projekta: obojeni kvadratić, naziv i tanka traka napretka sa procentom."""
+
+    def sizeHint(self, option, index) -> QSize:
+        return QSize(180, 50)
+
+    def paint(self, p: QPainter, option, index) -> None:
+        t = theme.tokens()
+        p.save()
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        r = QRectF(option.rect).adjusted(0, 2, 0, -2)
+        selected = bool(option.state & QStyle.StateFlag.State_Selected)
+        hover = bool(option.state & QStyle.StateFlag.State_MouseOver)
+        if selected or hover:
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(t.sidebar_active if selected else t.sidebar_hover))
+            p.drawRoundedRect(r, 8, 8)
+        archived = bool(index.data(ROLE_ARCHIVED))
+        color = QColor(index.data(ROLE_COLOR) or t.accent)
+        if archived:
+            color.setAlpha(110)
+        pct = int(index.data(ROLE_PCT) or 0)
+        x = r.left() + 10
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(color)
+        p.drawRoundedRect(QRectF(x, r.top() + 11, 9, 9), 3, 3)
+
+        name_color = QColor("#FFFFFF" if selected else t.sidebar_text)
+        if archived:
+            name_color = QColor(t.sidebar_muted)
+        font = QFont(option.font)
+        font.setWeight(QFont.Weight.DemiBold if selected else QFont.Weight.Medium)
+        p.setFont(font)
+        p.setPen(name_color)
+        text_rect = QRectF(x + 18, r.top() + 4, r.width() - 40, 22)
+        name = QFontMetrics(font).elidedText(
+            index.data(Qt.ItemDataRole.DisplayRole),
+            Qt.TextElideMode.ElideRight,
+            int(text_rect.width()),
+        )
+        p.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, name)
+
+        small = QFont(option.font)
+        small.setPointSizeF(max(7.0, option.font.pointSizeF() - 1.5))
+        p.setFont(small)
+        p.setPen(QColor(t.sidebar_muted))
+        pct_rect = QRectF(r.right() - 44, r.top() + 24, 36, 16)
+        p.drawText(pct_rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, f"{pct}%")
+        track = QRectF(x + 18, r.top() + 31, r.width() - 82, 4)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(t.sidebar_border if not selected else t.sidebar_hover))
+        p.drawRoundedRect(track, 2, 2)
+        if pct:
+            fill = QRectF(track)
+            fill.setWidth(max(4.0, track.width() * pct / 100))
+            p.setBrush(color)
+            p.drawRoundedRect(fill, 2, 2)
+        p.restore()
+
+
 class Sidebar(QFrame):
     settings_requested = Signal()
+    theme_toggle_requested = Signal()
 
     def __init__(self, ctx: AppContext, parent=None) -> None:
         super().__init__(parent)
         self.ctx = ctx
         self.setObjectName("Sidebar")
-        self.setFixedWidth(248)
+        self.setFixedWidth(256)
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(14, 16, 14, 12)
-        lay.setSpacing(8)
+        lay.setContentsMargins(14, 18, 14, 12)
+        lay.setSpacing(6)
 
+        brand = QHBoxLayout()
+        brand.setSpacing(10)
+        logo = QLabel()
+        logo_px = QPixmap(str(ICON_PATH))
+        logo_px.setDevicePixelRatio(logo_px.width() / 34)
+        logo.setPixmap(logo_px)
+        brand.addWidget(logo)
+        names = QVBoxLayout()
+        names.setSpacing(0)
         name = QLabel(APP_NAME)
         name.setObjectName("AppName")
-        lay.addWidget(name)
-        lay.addSpacing(8)
+        tagline = QLabel("Projekti, rokovi i budžet")
+        tagline.setObjectName("AppTagline")
+        names.addWidget(name)
+        names.addWidget(tagline)
+        brand.addLayout(names, 1)
+        lay.addLayout(brand)
+        lay.addSpacing(18)
 
         self.dashboard_button = QToolButton()
         self.dashboard_button.setObjectName("NavButton")
         self.dashboard_button.setText("  Pregled")
-        self.dashboard_button.setIcon(icons.icon("dashboard"))
         self.dashboard_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.dashboard_button.setCheckable(True)
         self.dashboard_button.setToolTip("Pregled svih projekata (Ctrl+0)")
         self.dashboard_button.clicked.connect(lambda: self.ctx.show_dashboard.emit())
         self.dashboard_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         lay.addWidget(self.dashboard_button)
-        lay.addSpacing(8)
+        lay.addSpacing(14)
         self.dashboard_mode = False
         ctx.show_dashboard.connect(self._enter_dashboard)
 
         head = QHBoxLayout()
+        head.setContentsMargins(4, 0, 0, 0)
         title = QLabel("Projekti")
         title.setObjectName("SidebarTitle")
         head.addWidget(title)
         head.addStretch(1)
         self.add_button = QToolButton()
-        self.add_button.setIcon(icons.icon("plus"))
         self.add_button.setToolTip("Novi projekat (Ctrl+Shift+N)")
         self.add_button.clicked.connect(self.new_project)
         head.addWidget(self.add_button)
@@ -89,7 +173,11 @@ class Sidebar(QFrame):
 
         self.list = QListWidget()
         self.list.setObjectName("ProjectList")
-        self.list.setIconSize(QSize(10, 10))
+        self.list.setItemDelegate(ProjectDelegate(self.list))
+        self.list.setMouseTracking(True)
+        self.list.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
+        self.list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.list.setUniformItemSizes(True)
         self.list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.list.customContextMenuRequested.connect(self._menu)
         self.list.currentItemChanged.connect(self._current_changed)
@@ -100,15 +188,37 @@ class Sidebar(QFrame):
         self.show_archived.toggled.connect(lambda _c: self.reload())
         lay.addWidget(self.show_archived)
 
-        settings = QToolButton()
-        settings.setIcon(icons.icon("settings"))
-        settings.setText("  Podešavanja")
-        settings.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        settings.clicked.connect(self.settings_requested.emit)
-        lay.addWidget(settings, 0, Qt.AlignmentFlag.AlignLeft)
+        footer = QFrame()
+        footer.setObjectName("SidebarFooter")
+        foot = QHBoxLayout(footer)
+        foot.setContentsMargins(0, 10, 0, 0)
+        foot.setSpacing(4)
+        self.settings_button = QToolButton()
+        self.settings_button.setText("  Podešavanja")
+        self.settings_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.settings_button.clicked.connect(self.settings_requested.emit)
+        foot.addWidget(self.settings_button)
+        foot.addStretch(1)
+        self.theme_button = QToolButton()
+        self.theme_button.clicked.connect(self.theme_toggle_requested.emit)
+        foot.addWidget(self.theme_button)
+        lay.addSpacing(6)
+        lay.addWidget(footer)
 
         ctx.data_changed.connect(self.reload)
+        theme.manager().changed.connect(self._theme_changed)
+        self._theme_changed()
         self.reload()
+
+    def _theme_changed(self) -> None:
+        t = theme.tokens()
+        self.dashboard_button.setIcon(icons.icon("dashboard", t.sidebar_text))
+        self.add_button.setIcon(icons.icon("plus", t.sidebar_muted))
+        self.settings_button.setIcon(icons.icon("settings", t.sidebar_muted))
+        dark = t.name == "dark"
+        self.theme_button.setIcon(icons.icon("sun" if dark else "moon", t.sidebar_muted))
+        self.theme_button.setToolTip("Svetla tema" if dark else "Tamna tema")
+        self.list.viewport().update()
 
     # --- podaci ----------------------------------------------------------------------------------
 
@@ -122,11 +232,12 @@ class Sidebar(QFrame):
                 done, total, pct = project_service.progress(s, p.id)
                 rows.append((p.id, p.name, p.color, p.archived, total, pct))
         for pid, name, color, archived, total, pct in rows:
-            item = QListWidgetItem(color_dot(color, faded=archived), name)
+            item = QListWidgetItem(name)
             item.setData(ROLE_ID, pid)
-            item.setToolTip(f"{name}\n{total} zadataka · {pct}% završeno")
-            if archived:
-                item.setForeground(QColor(self.palette().placeholderText().color()))
+            item.setData(ROLE_COLOR, color)
+            item.setData(ROLE_PCT, pct)
+            item.setData(ROLE_ARCHIVED, archived)
+            item.setToolTip(f"{name}\n{total} zadataka, {pct}% završeno")
             self.list.addItem(item)
         self.list.blockSignals(False)
 

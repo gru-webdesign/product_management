@@ -19,7 +19,7 @@ def test_main_window_opens_with_empty_state(qtbot, db):
     window = make_window(qtbot, db)
     assert window.windowTitle() == APP_NAME
     assert window.stack.currentIndex() == 0  # nema projekata → prazan ekran
-    assert str(db.paths.db_path) in window.statusBar().currentMessage()
+    assert window.statusBar().currentMessage() == ""  # putanja baze je u „O programu"
 
 
 def test_project_appears_and_is_selected(qtbot, db):

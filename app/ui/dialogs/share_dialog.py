@@ -121,7 +121,7 @@ class ShareDialog(QDialog):
         self.revoke_button.clicked.connect(self._revoke)
         self.publish_button = QPushButton("Objavi link")
         self.publish_button.setProperty("primary", True)
-        self.publish_button.setIcon(icons.icon("share", theme.tokens().accent_text))
+        self.publish_button.setIcon(icons.icon("share", theme.tokens().primary_text))
         self.publish_button.clicked.connect(self._publish)
         actions.addWidget(self.revoke_button)
         actions.addWidget(self.publish_button)

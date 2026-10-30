@@ -8,7 +8,6 @@ from PySide6.QtCore import QPoint, Qt
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
-    QFrame,
     QHBoxLayout,
     QLabel,
     QMenu,
@@ -30,6 +29,7 @@ from app.ui.dialogs.task_dialog import open_task
 from app.ui.views.base import ProjectView
 from app.ui.views.gantt.chart import GanttChart
 from app.ui.views.gantt.model import DepData, MilestoneData, RowData
+from app.ui.widgets.card import Card
 
 ZOOM_ORDER = list(ZOOMS)  # day, week, month
 
@@ -119,12 +119,9 @@ class GanttView(ProjectView):
         bar.addWidget(hint)
         lay.addLayout(bar)
 
-        frame = QFrame()
-        frame.setObjectName("Card")
-        fl = QVBoxLayout(frame)
-        fl.setContentsMargins(1, 1, 1, 1)
+        frame = Card(padding=(4, 6, 4, 4))
         self.chart = GanttChart()
-        fl.addWidget(self.chart)
+        frame.body.addWidget(self.chart)
         lay.addWidget(frame, 1)
 
         # Sve veze su „queued": obrada (upis u bazu, dijalog, meni) kreće tek kad se završi

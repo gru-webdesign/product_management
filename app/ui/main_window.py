@@ -39,21 +39,33 @@ def _fmt(d) -> str:
 class EmptyState(QWidget):
     def __init__(self, on_create, parent=None) -> None:
         super().__init__(parent)
+        from app.ui.widgets.card import Card
+        from app.ui.widgets.kpi import IconChip
+
         lay = QVBoxLayout(self)
         lay.addStretch(1)
+        card = Card(padding=(36, 32, 36, 32))
+        card.setFixedWidth(460)
+        chip = IconChip("folder", "accent", 52)
+        card.body.addWidget(chip, 0, Qt.AlignmentFlag.AlignCenter)
+        card.body.addSpacing(6)
         title = QLabel("Još nema projekata")
         title.setObjectName("EmptyTitle")
-        text = QLabel("Napravi prvi projekat, pa dodaj zadatke, rokove i budžet.")
+        text = QLabel(
+            "Napravi prvi projekat, prazan ili iz šablona, pa dodaj zadatke, rokove i budžet."
+        )
         text.setObjectName("EmptyText")
-        button = QPushButton("Novi projekat")
+        text.setWordWrap(True)
+        self.button = button = QPushButton("Novi projekat")
         button.setProperty("primary", True)
-        button.setIcon(icons.icon("plus", theme.tokens().accent_text))
+        button.setIcon(icons.icon("plus", theme.tokens().primary_text))
         button.clicked.connect(on_create)
         for w in (title, text):
             w.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lay.addWidget(w)
-        lay.addSpacing(10)
-        lay.addWidget(button, 0, Qt.AlignmentFlag.AlignCenter)
+            card.body.addWidget(w)
+        card.body.addSpacing(8)
+        card.body.addWidget(button, 0, Qt.AlignmentFlag.AlignCenter)
+        lay.addWidget(card, 0, Qt.AlignmentFlag.AlignCenter)
         lay.addStretch(2)
 
 
@@ -63,7 +75,7 @@ class ProjectHeader(QFrame):
         self.ctx = ctx
         self.setObjectName("Header")
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(24, 14, 20, 10)
+        lay.setContentsMargins(30, 22, 28, 10)
         lay.setSpacing(10)
 
         text = QVBoxLayout()
@@ -72,7 +84,7 @@ class ProjectHeader(QFrame):
         self.title.setObjectName("ProjectTitle")
         text.addWidget(self.title)
         meta = QHBoxLayout()
-        meta.setSpacing(18)
+        meta.setSpacing(14)
         self.client = QLabel()
         self.client.setProperty("muted", True)
         self.status = QLabel()
@@ -96,10 +108,11 @@ class ProjectHeader(QFrame):
         lay.addLayout(text, 1)
 
         self.search = QLineEdit()
+        self.search.setObjectName("SearchField")
         self.search.setPlaceholderText("Pretraži zadatke (Ctrl+F)")
         self.search.addAction(icons.icon("search"), QLineEdit.ActionPosition.LeadingPosition)
         self.search.setClearButtonEnabled(True)
-        self.search.setFixedWidth(240)
+        self.search.setFixedWidth(260)
         self._debounce = QTimer(self, singleShot=True, interval=200)
         self._debounce.timeout.connect(lambda: ctx.set_search(self.search.text()))
         self.search.textChanged.connect(lambda _t: self._debounce.start())
@@ -111,7 +124,7 @@ class ProjectHeader(QFrame):
 
         self.add_task_button = QPushButton("Zadatak")
         self.add_task_button.setProperty("primary", True)
-        self.add_task_button.setIcon(icons.icon("plus", theme.tokens().accent_text))
+        self.add_task_button.setIcon(icons.icon("plus", theme.tokens().primary_text))
         self.add_task_button.setToolTip("Novi zadatak (Ctrl+N)")
         lay.addWidget(self.add_task_button)
 
@@ -160,6 +173,7 @@ class MainWindow(QMainWindow):
                 self.ctx.project_id = last
         self.sidebar = Sidebar(self.ctx)
         self.sidebar.settings_requested.connect(self.open_settings)
+        self.sidebar.theme_toggle_requested.connect(self.toggle_theme)
         root.addWidget(self.sidebar)
 
         self.stack = QStackedWidget()
@@ -176,6 +190,7 @@ class MainWindow(QMainWindow):
         page.addWidget(self.header)
 
         self.tabs = QTabWidget()
+        self.tabs.setObjectName("ViewTabs")
         self.tabs.setDocumentMode(True)
         self.tabs.tabBar().setDrawBase(False)
         self.views: list[ProjectView] = self._make_views()
@@ -183,7 +198,7 @@ class MainWindow(QMainWindow):
             self.tabs.addTab(view, icons.icon(view.icon_name), view.title)
         tabs_wrap = QWidget()
         tw = QVBoxLayout(tabs_wrap)
-        tw.setContentsMargins(16, 4, 16, 12)
+        tw.setContentsMargins(22, 4, 22, 14)
         tw.addWidget(self.tabs)
         page.addWidget(tabs_wrap, 1)
         self.stack.addWidget(project_page)
@@ -194,7 +209,7 @@ class MainWindow(QMainWindow):
         root.addWidget(self.stack, 1)
         self.setCentralWidget(central)
 
-        self.statusBar().showMessage(f"Baza: {db.paths.db_path}")
+        self.statusBar().setSizeGripEnabled(False)
         from app.ui.widgets.timer_widget import TimerWidget
 
         self.timer_widget = TimerWidget(self.ctx)
@@ -314,6 +329,11 @@ class MainWindow(QMainWindow):
     def _theme_changed(self) -> None:
         for i, view in enumerate(self.views):
             self.tabs.setTabIcon(i, icons.icon(view.icon_name))
+        t = theme.tokens()
+        self.header.add_task_button.setIcon(icons.icon("plus", t.primary_text))
+        self.header.share_button.setIcon(icons.icon("share"))
+        self.header.search.actions()[0].setIcon(icons.icon("search"))
+        self.empty.button.setIcon(icons.icon("plus", t.primary_text))
         self.ctx.data_changed.emit()
 
     def current_view(self) -> ProjectView:
@@ -514,6 +534,9 @@ class MainWindow(QMainWindow):
 
         RestoreDialog(self.ctx, self).exec()
 
+    def toggle_theme(self) -> None:
+        self.set_theme("light" if theme.tokens().name == "dark" else "dark")
+
     def set_theme(self, mode: str) -> None:
         theme.apply(QApplication.instance(), mode)
         from app.services.defaults import set_setting
@@ -568,4 +591,4 @@ class MainWindow(QMainWindow):
 
 def initial_theme(db: Database) -> str:
     with db.session() as s:
-        return get_setting(s, "theme") or "system"
+        return get_setting(s, "theme") or "dark"

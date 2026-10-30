@@ -44,8 +44,8 @@ app/
                        gantt/ (chart, items, model; load_chart_data koristi i PDF)
     dialogs/           project (sa šablonom), task (6 tabova, i Vreme), milestone, cost,
                        budget, share, settings, restore, templates
-    widgets/           fields (datum, novac, boja), paint (bedževi, trake), comments_panel,
-                       timer_widget (tajmer u statusnoj traci)
+    widgets/           card (kartica sa senkom), kpi (brojka + ikonica), fields, paint
+                       (bedževi, trake), comments_panel, timer_widget (tajmer u statusnoj traci)
 share_worker/          Cloudflare Worker (src/index.js) + Node testovi + README za postavljanje
 installer/             etapa.spec (PyInstaller), setup.iss (Inno Setup), icon.ico, launch.py
 scripts/               seed_demo.py, screenshots.py, build.ps1
@@ -74,9 +74,13 @@ tests/                 115 testova (servisi + UI preko pytest-qt, bez prozora)
 - U testovima tema se primenjuje jednom po sesiji (conftest), ne u svakom testu (sporo).
 - Signal teme (`theme.manager().changed`) vezuj za metodu objekta, ne za lambda: lambda nadživi
   obrisan widget → RuntimeError.
-- Dizajn (v1.1): jedan akcenat kobalt `#2F55D4` (tamna `#6E8EF5`), Geist, a Geist Mono samo za
+- Dizajn: teget i belo. Tamna tema (podrazumevana) je cela teget (`#0A1128`), svetla ima belu
+  površinu i teget sidebar. Dugme `primary` je belo/teget (token `primary`), plava (`accent`)
+  je za podatke i izbor. Površine su `widgets/card.py` (Card, paint_card: senka bez
+  QGraphicsEffect-a), brojke `widgets/kpi.py` (KpiCard, IconChip). Geist, Geist Mono samo za
   brojeve u kolonama; Phosphor ikonice; bez crta (— –) u vidljivom tekstu, bez VELIKIH naslova;
-  radijusi: kontrole 6, površine 10, ugnežđeno 8, pilule pune.
+  radijusi: kontrole 8, kartice 12, ugnežđeno 10, pilule pune. Novi prikaz = sadržaj u Card,
+  traka iznad sa marginom 8 levo/desno (poravnanje sa karticom).
 - Posle svakog koraka: `ruff check . && ruff format --check . && pytest`, pa commit i
   ažuriranje sekcije „Stanje“ ispod.
 
@@ -115,6 +119,9 @@ v1.1 (verzija 1.1.0):
 - [x] Podsetnici za rokove (sistemska traka)
 - [x] Izvoz: PDF izveštaj sa Gantom (Ctrl+P), Excel (Ctrl+Shift+X), CSV (Ctrl+E)
 - [x] Provera nove verzije (Pomoć, GitHub releases; treba objaviti Release `v1.1.0`)
+- [x] Redizajn 2: teget/bela tema (tamna podrazumevana), kartice sa senkom, novi Pregled
+  (prsten stanja, rokovi, poslednje izmene, sati po danima), sidebar sa napretkom projekata,
+  Kanban kolone, prekidač teme dole levo
 
 Šta korisnik treba sam da uradi (traži njegov nalog/računar):
 - `scripts\build.ps1` na Windows-u (treba Inno Setup 6) → instaler

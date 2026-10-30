@@ -32,33 +32,12 @@ from app.ui.dialogs.budget_dialog import edit_budget
 from app.ui.dialogs.cost_dialog import edit_money_entry
 from app.ui.sidebar import color_dot
 from app.ui.views.base import ProjectView
+from app.ui.widgets.card import Card
+from app.ui.widgets.kpi import KpiCard
 from app.ui.widgets.paint import ProgressDelegate
 
 ROLE_ID = Qt.ItemDataRole.UserRole
 RIGHT = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
-
-
-class Kpi(QFrame):
-    def __init__(self, label: str, parent=None) -> None:
-        super().__init__(parent)
-        self.setObjectName("Card")
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(16, 12, 16, 12)
-        lay.setSpacing(2)
-        self.label = QLabel(label)
-        self.label.setObjectName("KpiLabel")
-        self.value = QLabel("-")
-        self.value.setObjectName("KpiValue")
-        self.sub = QLabel("")
-        self.sub.setProperty("muted", True)
-        lay.addWidget(self.label)
-        lay.addWidget(self.value)
-        lay.addWidget(self.sub)
-
-    def set(self, value: str, sub: str = "", color: str | None = None) -> None:
-        self.value.setText(value)
-        self.sub.setText(sub)
-        self.value.setStyleSheet(f"color: {color};" if color else "")
 
 
 class Banner(QFrame):
@@ -101,6 +80,7 @@ class SpendingChart(QChartView):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setFrameShape(QFrame.Shape.NoFrame)
         self.setMinimumHeight(200)
         self.chart_ = QChart()
         self.chart_.legend().setVisible(True)
@@ -123,6 +103,7 @@ class SpendingChart(QChartView):
         for axis in c.axes():
             c.removeAxis(axis)
         c.setBackgroundBrush(QColor(t.surface))
+        self.setBackgroundBrush(QColor(t.surface))
         c.setPlotAreaBackgroundVisible(False)
         c.legend().setLabelColor(QColor(t.muted))
 
@@ -186,12 +167,13 @@ class BudgetView(ProjectView):
         super().__init__(ctx, parent)
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 10, 0, 0)
-        root.setSpacing(10)
+        root.setSpacing(6)
 
         bar = QHBoxLayout()
+        bar.setContentsMargins(8, 0, 8, 4)
         self.add_cost_button = QPushButton("Trošak")
         self.add_cost_button.setProperty("primary", True)
-        self.add_cost_button.setIcon(icons.icon("plus", theme.tokens().accent_text))
+        self.add_cost_button.setIcon(icons.icon("plus", theme.tokens().primary_text))
         self.add_cost_button.clicked.connect(lambda: self._edit("cost"))
         add_income = QPushButton("Prihod")
         add_income.setIcon(icons.icon("plus"))
@@ -208,12 +190,12 @@ class BudgetView(ProjectView):
         root.addLayout(bar)
 
         kpis = QGridLayout()
-        kpis.setSpacing(10)
-        self.k_budget = Kpi("Budžet")
-        self.k_spent = Kpi("Potrošeno")
-        self.k_left = Kpi("Preostalo")
-        self.k_income = Kpi("Prihod")
-        self.k_profit = Kpi("Zarada")
+        kpis.setSpacing(2)
+        self.k_budget = KpiCard("Budžet", "wallet", small=True)
+        self.k_spent = KpiCard("Potrošeno", "coins", "warning", small=True)
+        self.k_left = KpiCard("Preostalo", "hourglass", small=True)
+        self.k_income = KpiCard("Prihod", "download", "success", small=True)
+        self.k_profit = KpiCard("Zarada", "chart", "success", small=True)
         for i, k in enumerate(
             (self.k_budget, self.k_spent, self.k_left, self.k_income, self.k_profit)
         ):
@@ -221,14 +203,17 @@ class BudgetView(ProjectView):
         root.addLayout(kpis)
 
         self.banner = Banner()
-        root.addWidget(self.banner)
+        banner_wrap = QHBoxLayout()
+        banner_wrap.setContentsMargins(8, 0, 8, 2)
+        banner_wrap.addWidget(self.banner)
+        root.addLayout(banner_wrap)
 
         split = QSplitter(Qt.Orientation.Vertical)
         split.setChildrenCollapsible(False)
         top = QWidget()
         tl = QHBoxLayout(top)
         tl.setContentsMargins(0, 0, 0, 0)
-        tl.setSpacing(10)
+        tl.setSpacing(2)
         self.categories = QTreeWidget()
         self.categories.setHeaderLabels(["Kategorija", "Planirano", "Potrošeno", "Preostalo", ""])
         self.categories.setRootIsDecorated(False)
@@ -241,13 +226,12 @@ class BudgetView(ProjectView):
         self.categories.itemDoubleClicked.connect(
             lambda *_: QTimer.singleShot(0, self._edit_budget)
         )
-        tl.addWidget(self.categories, 3)
-        chart_card = QFrame()
-        chart_card.setObjectName("Card")
-        cl = QVBoxLayout(chart_card)
-        cl.setContentsMargins(6, 6, 6, 6)
+        cat_card = Card("Budžet po kategorijama", icon="wallet", padding=(14, 14, 14, 8))
+        cat_card.body.addWidget(self.categories)
+        tl.addWidget(cat_card, 3)
+        chart_card = Card("Potrošnja kroz vreme", icon="chart", padding=(10, 14, 10, 6))
         self.chart = SpendingChart()
-        cl.addWidget(self.chart)
+        chart_card.body.addWidget(self.chart)
         tl.addWidget(chart_card, 2)
         split.addWidget(top)
 
@@ -259,7 +243,9 @@ class BudgetView(ProjectView):
         self.incomes = self._entries_tree(["Datum", "Opis", "Iznos", "U osnovnoj valuti"], "income")
         self.entries.addTab(self.costs, "Troškovi")
         self.entries.addTab(self.incomes, "Prihodi")
-        split.addWidget(self.entries)
+        entries_card = Card(padding=(10, 8, 10, 8))
+        entries_card.body.addWidget(self.entries)
+        split.addWidget(entries_card)
         split.setSizes([320, 280])
         root.addWidget(split, 1)
 

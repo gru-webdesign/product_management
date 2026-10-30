@@ -27,6 +27,7 @@ from app.services.tasks import TaskFilter, is_overdue
 from app.ui import icons, theme
 from app.ui.dialogs.task_dialog import open_new_task, open_task
 from app.ui.views.base import ProjectView
+from app.ui.widgets.card import Card
 from app.ui.widgets.paint import PillDelegate, ProgressDelegate
 
 ROLE_ID = Qt.ItemDataRole.UserRole
@@ -69,6 +70,7 @@ class ListView(ProjectView):
         lay.setSpacing(8)
 
         bar = QHBoxLayout()
+        bar.setContentsMargins(8, 0, 8, 0)
         bar.setSpacing(8)
         self.status_filter = QComboBox()
         self.status_filter.addItem("Svi statusi", None)
@@ -137,7 +139,9 @@ class ListView(ProjectView):
         header.sectionClicked.connect(self._sort_clicked)
         self._sort_col: int | None = None
         self._sort_order = Qt.SortOrder.AscendingOrder
-        lay.addWidget(self.tree, 1)
+        self.card = Card(padding=(8, 4, 8, 8))
+        self.card.body.addWidget(self.tree)
+        lay.addWidget(self.card, 1)
 
         self.empty = QLabel("Nema zadataka. Dodaj prvi dugmetom „Zadatak“ ili Ctrl+N.")
         self.empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
