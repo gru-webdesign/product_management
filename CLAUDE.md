@@ -55,7 +55,7 @@ app/
 share_worker/          Cloudflare Worker (src/index.js) + Node testovi + README za postavljanje
 installer/             etapa.spec (PyInstaller), setup.iss (Inno Setup), icon.ico, launch.py
 scripts/               seed_demo.py, screenshots.py, build.ps1
-tests/                 139 testova (servisi + UI preko pytest-qt, bez prozora)
+tests/                 138 testova (servisi + UI preko pytest-qt, bez prozora)
 ```
 
 ## Pravila koda
