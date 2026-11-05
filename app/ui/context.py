@@ -33,6 +33,7 @@ class AppContext(QObject):
         self.db = db
         self.project_id: str = ""
         self.search: str = ""
+        self.lan = None  # LanShare (app/ui/lan_share.py), postavlja ga glavni prozor
 
     @contextmanager
     def session(self):

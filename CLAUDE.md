@@ -1,8 +1,9 @@
 # Etapa — kontekst projekta
 
 Desktop aplikacija za **jednog korisnika** za vođenje projekata, rokova i budžeta. Radi potpuno
-lokalno (SQLite), bez servera i naloga. Jedina veza sa internetom je opciono **deljenje linkom**:
-snimak stanja projekta za pregled + komentari gledalaca, preko jednog Cloudflare Worker-a.
+lokalno (SQLite), bez servera i naloga. **Deljenje linkom** (pregled + komentari gledalaca) je
+podrazumevano u **lokalnoj mreži**: Etapa sama služi stranicu (`app/share/local_server.py`), podaci
+ne izlaze iz mreže. Opciono (`share_mode = cloud`) ide preko korisnikovog Cloudflare Worker-a.
 
 Pun plan: https://claude.ai/artifact/8yjLN6prd3wowrenHYMQbU
 Repo: https://github.com/gru-webdesign/product_management
@@ -30,8 +31,8 @@ app/
   services/            poslovna logika BEZ Qt-a: projects, tasks, dependencies, milestones,
                        gantt_math, budget, sharing, activity, backup, defaults, money, export_csv,
                        export_xlsx, timetracking, dashboard, templates, reminders, updates
-  share/               snapshot (šta se deli), render + templates/share.html, client (Worker),
-                       secrets (keyring)
+  share/               snapshot (šta se deli), render + templates/share.html, local_server
+                       (deljenje u mreži, iste adrese kao Worker), client (Worker), secrets
   ui/
     main_window.py     sidebar + zaglavlje + tabovi, meniji, deljenje u pozadini
     context.py         AppContext: izabrani projekat, pretraga, data_changed, run()
@@ -39,6 +40,7 @@ app/
                        (resources/icons/phosphor, boja se menja u kodu)
     export.py          dijalozi za izvoz (CSV, Excel, PDF); report.py pravi PDF (QTextDocument)
     reminders.py       podsetnici za rokove (sistemska traka, provera na 30 min)
+    lan_share.py       pokreće/gasi lokalni server po uključenim linkovima; komentar → signal
     background.py      mrežni poslovi u QThreadPool-u (sopstvena sesija po poslu)
     views/             dashboard_view, list_view, kanban_view, budget_view,
                        gantt/ (chart, items, model; load_chart_data koristi i PDF)
@@ -49,7 +51,7 @@ app/
 share_worker/          Cloudflare Worker (src/index.js) + Node testovi + README za postavljanje
 installer/             etapa.spec (PyInstaller), setup.iss (Inno Setup), icon.ico, launch.py
 scripts/               seed_demo.py, screenshots.py, build.ps1
-tests/                 115 testova (servisi + UI preko pytest-qt, bez prozora)
+tests/                 122 testa (servisi + UI preko pytest-qt, bez prozora)
 ```
 
 ## Pravila koda
@@ -71,6 +73,8 @@ tests/                 115 testova (servisi + UI preko pytest-qt, bez prozora)
   POSLE događaja: `QueuedConnection` ili `QTimer.singleShot(0, ...)`. Inače osvežavanje briše
   stavku koja još obrađuje događaj → pad aplikacije.
 - Mreža (Worker) nikad u glavnoj niti za automatske poslove: `ui/background.run(db, fn, ...)`.
+- Lokalni server radi u svojoj niti sa svojom sesijom po zahtevu; UI dobija vest samo preko
+  signala `LanShare.comment_received`. Server radi samo dok postoji uključen link.
 - U testovima tema se primenjuje jednom po sesiji (conftest), ne u svakom testu (sporo).
 - Signal teme (`theme.manager().changed`) vezuj za metodu objekta, ne za lambda: lambda nadživi
   obrisan widget → RuntimeError.
@@ -122,9 +126,11 @@ v1.1 (verzija 1.1.0):
 - [x] Redizajn 2: teget/bela tema (tamna podrazumevana), kartice sa senkom, novi Pregled
   (prsten stanja, rokovi, poslednje izmene, sati po danima), sidebar sa napretkom projekata,
   Kanban kolone, prekidač teme dole levo
+- [x] Deljenje u lokalnoj mreži (podrazumevano): server u aplikaciji, PIN sa ograničenjem
+  pokušaja, komentari direktno u bazu, stranica uvek ažurna; Cloudflare ostaje kao opcija
 
 Šta korisnik treba sam da uradi (traži njegov nalog/računar):
 - `scripts\build.ps1` na Windows-u (treba Inno Setup 6) → instaler
-- postavljanje Worker-a na Cloudflare po `share_worker/README.md`
+- (samo za deljenje preko interneta) postavljanje Worker-a po `share_worker/README.md`
 
 Odloženo (nije u v1.1): prilozi/slike računa, engleski jezik.

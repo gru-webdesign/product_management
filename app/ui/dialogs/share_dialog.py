@@ -1,4 +1,8 @@
-"""Dijalog „Podeli“: objava snimka projekta na link, PIN, automatsko ažuriranje, komentari."""
+"""Dijalog „Podeli“: link za pregled projekta, PIN, komentari.
+
+U lokalnom režimu link služi sama Etapa u mreži (app/ui/lan_share.py), u „cloud“ režimu
+snimak se objavljuje na Cloudflare Worker.
+"""
 
 from __future__ import annotations
 
@@ -35,13 +39,18 @@ class ShareDialog(QDialog):
         with ctx.session() as s:
             project = project_service.get(s, self.project_id)
             self.setWindowTitle(f"Podeli: {project.name}")
+            self.lan_mode = sharing.mode(s) == "lan"
         self.setMinimumSize(620, 640)
         root = QVBoxLayout(self)
         root.setContentsMargins(20, 18, 20, 16)
         root.setSpacing(12)
 
         intro = QLabel(
-            "Link prikazuje snimak stanja projekta samo za pregled. Gledaoci mogu da ostave "
+            "Link prikazuje stanje projekta samo za pregled, uvek ažurno. Radi u lokalnoj mreži "
+            "dok je Etapa otvorena na ovom računaru, a podaci ne izlaze iz mreže. Gledaoci mogu "
+            "da ostave komentar, a ne mogu ništa da menjaju. Beleške i opisi zadataka se ne dele."
+            if self.lan_mode
+            else "Link prikazuje snimak stanja projekta samo za pregled. Gledaoci mogu da ostave "
             "komentar, a ne mogu ništa da menjaju. Beleške i opisi zadataka se ne dele."
         )
         intro.setWordWrap(True)
@@ -53,13 +62,13 @@ class ShareDialog(QDialog):
         self.setup_box.setProperty("level", "warn")
         sl = QHBoxLayout(self.setup_box)
         sl.setContentsMargins(14, 10, 14, 10)
-        setup_text = QLabel(
+        self.setup_text = setup_text = QLabel(
             "Deljenje još nije podešeno. Potreban je besplatan Cloudflare "
             "Worker (podešava se jednom)."
         )
         setup_text.setWordWrap(True)
         sl.addWidget(setup_text, 1)
-        setup = QPushButton("Podesi…")
+        setup = QPushButton("Podešavanja…" if self.lan_mode else "Podesi…")
         setup.clicked.connect(self._open_settings)
         sl.addWidget(setup)
         root.addWidget(self.setup_box)
@@ -77,7 +86,7 @@ class ShareDialog(QDialog):
         wl.addStretch(1)
         root.addWidget(what)
 
-        protect = QGroupBox("Zaštita i ažuriranje")
+        protect = QGroupBox("Zaštita" if self.lan_mode else "Zaštita i ažuriranje")
         pl = QVBoxLayout(protect)
         pin_row = QHBoxLayout()
         self.use_pin = QCheckBox("Traži PIN")
@@ -93,12 +102,15 @@ class ShareDialog(QDialog):
             "Automatski ažuriraj link posle svake izmene (kad ima interneta)"
         )
         pl.addWidget(self.auto_update)
+        self.auto_update.setVisible(not self.lan_mode)
         root.addWidget(protect)
 
         link_row = QHBoxLayout()
         self.url = QLineEdit()
         self.url.setReadOnly(True)
-        self.url.setPlaceholderText("Link još nije objavljen")
+        self.url.setPlaceholderText(
+            "Link još nije uključen" if self.lan_mode else "Link još nije objavljen"
+        )
         self.copy_button = QPushButton("Kopiraj")
         self.copy_button.setIcon(icons.icon("link"))
         self.copy_button.clicked.connect(self._copy)
@@ -116,10 +128,10 @@ class ShareDialog(QDialog):
         self.status.setProperty("muted", True)
         self.status.setWordWrap(True)
         actions.addWidget(self.status, 1)
-        self.revoke_button = QPushButton("Opozovi link")
+        self.revoke_button = QPushButton("Isključi link" if self.lan_mode else "Opozovi link")
         self.revoke_button.setProperty("danger", True)
         self.revoke_button.clicked.connect(self._revoke)
-        self.publish_button = QPushButton("Objavi link")
+        self.publish_button = QPushButton("Uključi link" if self.lan_mode else "Objavi link")
         self.publish_button.setProperty("primary", True)
         self.publish_button.setIcon(icons.icon("share", theme.tokens().primary_text))
         self.publish_button.clicked.connect(self._publish)
@@ -144,6 +156,9 @@ class ShareDialog(QDialog):
     # --- stanje ----------------------------------------------------------------------------------
 
     def _load(self) -> None:
+        if self.lan_mode:
+            self._load_lan()
+            return
         with self.ctx.session() as s:
             self.is_configured = sharing.configured(s)
             link = sharing.active_link(s, self.project_id)
@@ -179,6 +194,42 @@ class ShareDialog(QDialog):
             f"Poslednja objava: {when}" if published else "Link se pravi pri prvoj objavi."
         )
 
+    def _load_lan(self) -> None:
+        lan = self.ctx.lan
+        with self.ctx.session() as s:
+            link = sharing.active_link(s, self.project_id)
+            opts = sharing.options_of(link) if link else ShareOptions()
+            self.has_pin = bool(link and link.pin_hash)
+            on = bool(link and link.last_published_at)
+            token = link.token if link else ""
+        url = lan.url(token) if (on and lan is not None and lan.running) else ""
+        error = lan.error if (on and lan is not None and not lan.running) else ""
+        self.is_configured = True
+        self.setup_text.setText(error)
+        self.setup_box.setVisible(bool(error))
+        self.setup_box.setProperty("level", "over")
+        theme.repolish(self.setup_box)
+        self.show_gantt.setChecked(opts.show_gantt)
+        self.show_list.setChecked(opts.show_list)
+        self.show_budget.setChecked(opts.show_budget)
+        self.use_pin.setChecked(self.has_pin)
+        self.pin.clear()
+        self.pin.setPlaceholderText(
+            "PIN je postavljen. Upiši novi da ga promeniš." if self.has_pin else "4 do 32 znaka"
+        )
+        self._pin_toggled(self.has_pin)
+        self.url.setText(url)
+        self.copy_button.setEnabled(bool(url))
+        self.open_button.setEnabled(bool(url))
+        self.revoke_button.setEnabled(on)
+        self.publish_button.setText("Sačuvaj izmene" if on else "Uključi link")
+        self.publish_button.setEnabled(True)
+        self.status.setText(
+            "Link radi dok je Etapa otvorena. Otvara se na računarima i telefonima u istoj mreži."
+            if url
+            else "Link se pravi kad ga uključiš."
+        )
+
     def _pin_toggled(self, on: bool) -> None:
         self.pin.setEnabled(on)
 
@@ -199,6 +250,9 @@ class ShareDialog(QDialog):
         else:
             pin = ""
         options, auto = self._options(), self.auto_update.isChecked()
+        if self.lan_mode:
+            self._enable_lan(options, pin)
+            return
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             with self.ctx.session() as s:
@@ -219,7 +273,55 @@ class ShareDialog(QDialog):
         )
         self.ctx.notify("Link za deljenje je objavljen.")
 
+    def _enable_lan(self, options: ShareOptions, pin: str | None) -> None:
+        try:
+            with self.ctx.session() as s:
+                sharing.enable_local(s, self.project_id, options, pin)
+                s.commit()
+        except ValueError as exc:
+            self.status.setText(str(exc))
+            return
+        lan = self.ctx.lan
+        if lan is not None:
+            lan.sync()
+        self._load()
+        self.comments.reload()
+        self.ctx.data_changed.emit()
+        if self.url.text():
+            QGuiApplication.clipboard().setText(self.url.text())
+            self.status.setText(
+                "Link radi i kopiran je. Pošalji ga kolegama u istoj mreži"
+                + (" zajedno sa PIN-om." if self.use_pin.isChecked() else ".")
+            )
+            self.ctx.notify("Link za deljenje u lokalnoj mreži je uključen.")
+
+    def _disable_lan(self) -> None:
+        if (
+            QMessageBox.question(
+                self,
+                "Isključi link",
+                "Link će odmah prestati da radi za sve koji ga imaju. Komentari ostaju u "
+                "aplikaciji. Nastaviti?",
+            )
+            != QMessageBox.StandardButton.Yes
+        ):
+            return
+        with self.ctx.session() as s:
+            link = sharing.active_link(s, self.project_id)
+            if link is not None:
+                sharing.disable_local(s, link)
+            s.commit()
+        if self.ctx.lan is not None:
+            self.ctx.lan.sync()
+        self._load()
+        self.comments.reload()
+        self.ctx.data_changed.emit()
+        self.status.setText("Link je isključen. Kad ga ponovo uključiš, dobija novu adresu.")
+
     def _revoke(self) -> None:
+        if self.lan_mode:
+            self._disable_lan()
+            return
         if (
             QMessageBox.question(
                 self,

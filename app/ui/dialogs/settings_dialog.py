@@ -1,4 +1,4 @@
-"""Podešavanja: opšte (ime, valuta, satnica, prag upozorenja, tema) i deljenje (Worker)."""
+"""Podešavanja: opšte (ime, valuta, satnica, upozorenje, tema) i deljenje (mreža ili Worker)."""
 
 from __future__ import annotations
 
@@ -128,18 +128,38 @@ class SettingsDialog(QDialog):
             url = sharing.worker_url(s)
             has_key = bool(get_admin_key(s))
             fallback = uses_fallback(s)
+            mode, port = sharing.mode(s), sharing.lan_port(s)
+        self.share_mode = QComboBox()
+        self.share_mode.addItem("Lokalna mreža (podaci ne izlaze iz mreže)", "lan")
+        self.share_mode.addItem("Internet, preko Cloudflare Worker-a", "cloud")
+        self.share_mode.setCurrentIndex(0 if mode == "lan" else 1)
+        f.addRow("Način deljenja", self.share_mode)
+        self.lan_port = QSpinBox()
+        self.lan_port.setRange(1024, 65535)
+        self.lan_port.setValue(port)
+        f.addRow("Port", self.lan_port)
+        self.lan_hint = QLabel(
+            "Link radi samo dok je Etapa otvorena, i samo na računarima i telefonima u istoj "
+            "mreži. Prvi put Windows može da pita za dozvolu u zaštitnom zidu: dozvoli za "
+            "privatnu mrežu."
+        )
+        self.lan_hint.setWordWrap(True)
+        self.lan_hint.setProperty("faint", True)
+        f.addRow("", self.lan_hint)
         intro = QLabel(
-            "Deljenje koristi tvoj besplatni Cloudflare Worker. Napravi ga jednom po uputstvu, "
-            "pa ovde upiši njegovu adresu i tajni ključ."
+            "Deljenje preko interneta koristi tvoj besplatni Cloudflare Worker. Napravi ga "
+            "jednom po uputstvu, pa ovde upiši njegovu adresu i tajni ključ."
         )
         intro.setWordWrap(True)
         intro.setProperty("muted", True)
         f.addRow(intro)
+        self.cloud_widgets: list[QWidget] = [intro]
         help_button = QPushButton("Uputstvo za postavljanje Worker-a")
         help_button.setProperty("link", True)
         help_button.setCursor(Qt.CursorShape.PointingHandCursor)
         help_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(WORKER_HELP)))
         f.addRow("", help_button)
+        self.cloud_widgets.append(help_button)
         self.worker_url = QLineEdit(url)
         self.worker_url.setPlaceholderText("https://etapa-share.tvojnalog.workers.dev")
         self.admin_key = QLineEdit()
@@ -157,6 +177,9 @@ class SettingsDialog(QDialog):
         self.test_result.setWordWrap(True)
         row.addWidget(self.test_result, 1)
         f.addRow("", row)
+        self.cloud_widgets += [self.worker_url, self.admin_key, test, self.test_result]
+        self.share_mode.currentIndexChanged.connect(lambda _i: self._mode_changed())
+        self._mode_changed()
         if fallback:
             warn = QLabel(
                 "Sistemsko skladište lozinki nije dostupno, pa je ključ sačuvan u lokalnoj bazi."
@@ -165,6 +188,13 @@ class SettingsDialog(QDialog):
             warn.setStyleSheet(f"color: {theme.tokens().warning};")
             f.addRow("", warn)
         return w
+
+    def _mode_changed(self) -> None:
+        cloud = self.share_mode.currentData() == "cloud"
+        for widget in self.cloud_widgets:
+            widget.setEnabled(cloud)
+        self.lan_port.setEnabled(not cloud)
+        self.lan_hint.setEnabled(not cloud)
 
     def _test(self) -> None:
         t = theme.tokens()
@@ -197,10 +227,13 @@ class SettingsDialog(QDialog):
             values["base_currency"] = self.base.currentData()
         url = self.worker_url.text().strip()
         key = self.admin_key.text().strip() or None
+        share_mode, port = self.share_mode.currentData(), self.lan_port.value()
 
         def work(s):
             for k, v in values.items():
                 set_setting(s, k, v)
+            sharing.set_mode(s, share_mode)
+            sharing.set_lan_port(s, port)
             try:
                 sharing.save_config(s, url, key)
             except ShareError as exc:
@@ -209,6 +242,8 @@ class SettingsDialog(QDialog):
 
         if self.ctx.run(work, self):
             theme.apply(QApplication.instance(), values["theme"])
+            if self.ctx.lan is not None:
+                self.ctx.lan.sync()
             self.accept()
 
     def _fail(self, text: str) -> None:

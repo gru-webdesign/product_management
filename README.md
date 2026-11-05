@@ -17,7 +17,7 @@ u jednom fajlu na tvom računaru.
   postojećeg projekta
 - **Podsetnici** za rokove koji ističu ili kasne (obaveštenje u sistemskoj traci)
 - **Izvoz**: PDF izveštaj sa Gantom (Ctrl+P), Excel sa svim podacima, CSV
-- **Deljenje linkom** sa PIN-om i komentarima gledalaca
+- **Deljenje linkom u lokalnoj mreži** sa PIN-om i komentarima gledalaca (opciono preko interneta)
 - Svetla i tamna tema
 
 ## Pokretanje iz koda (Windows)
@@ -59,11 +59,14 @@ traži administratorska prava; deinstalacija ne briše podatke.
 
 ## Deljenje linkom
 
-Jednom napravi besplatan Cloudflare Worker po uputstvu
-[share_worker/README.md](share_worker/README.md), pa u aplikaciji
-**Podešavanja → Deljenje** upiši njegovu adresu i tajni ključ. Posle toga dugme **Podeli** u
-svakom projektu pravi link za pregled (opciono sa PIN-om), a komentari gledalaca stižu u
-aplikaciju.
+Podrazumevano deljenje radi **u lokalnoj mreži**, bez interneta i bez spoljnog servera. Dugme
+**Podeli** → **Uključi link** daje adresu tipa `http://192.168.1.20:8765/p/...`, koju otvaraju
+računari i telefoni u istoj mreži. Stranica je uvek ažurna, komentari stižu odmah u aplikaciju,
+a link radi dok je Etapa otvorena. Prvi put Windows može da pita za dozvolu u zaštitnom zidu:
+dozvoli za privatnu mrežu. Port se menja u **Podešavanja → Deljenje**.
+
+Za deljenje preko interneta, u istom podešavanju izaberi **Internet, preko Cloudflare Worker-a**
+i postavi Worker po uputstvu [share_worker/README.md](share_worker/README.md).
 
 ## Gde su podaci
 
@@ -73,7 +76,7 @@ pravi se pri svakom pokretanju). **Datoteka → Vrati bazu iz kopije…** vraća
 ## Razvoj
 
 ```powershell
-pytest                                   # 115 testova (servisi + UI, bez prozora)
+pytest                                   # 122 testa (servisi + UI, bez prozora)
 ruff check . ; ruff format .             # stil koda
 python scripts\screenshots.py shots      # snimci svih ekrana sa demo podacima
 cd share_worker ; npm test               # testovi Worker-a

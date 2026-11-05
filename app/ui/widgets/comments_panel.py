@@ -120,6 +120,8 @@ class CommentsPanel(QWidget):
             empty.setForeground(QColor(t.faint))
             self.list.addItem(empty)
         self.sync_button.setEnabled(has_link)
+        with self.ctx.session() as s:
+            self.sync_button.setVisible(sharing.mode(s) == "cloud")
         self._selection()
 
     def _selection(self) -> None:

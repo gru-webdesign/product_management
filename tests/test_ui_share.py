@@ -24,6 +24,7 @@ from tests.test_sharing import KEY, FakeWorker
 def setup(qtbot, db, monkeypatch):
     with db.session() as s:
         seed(s, today=date.today())
+        sharing.set_mode(s, "cloud")  # ovi testovi proveravaju deljenje preko Worker-a
         s.commit()
     worker = FakeWorker()
     real = sharing.make_client
@@ -223,3 +224,52 @@ def test_export_dialogs(setup, tmp_path, monkeypatch):
     csv_path = export.export_tasks_dialog(w.ctx, w)
     assert "Figma" in csv_path.read_text(encoding="utf-8-sig")
     assert export.export_pdf_dialog(w.ctx, w) is None  # otkazano
+
+
+def test_lan_share_dialog_flow(qtbot, db, monkeypatch):
+    with db.session() as s:
+        seed(s, today=date.today())
+        sharing.set_lan_port(s, _free_port())
+        s.commit()
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
+    w = MainWindow(db)
+    qtbot.addWidget(w)
+    w.show()
+    assert not w.lan.running  # bez uključenih linkova server ne radi
+    dlg = ShareDialog(w.ctx, w)
+    qtbot.addWidget(dlg)
+    dlg.show()
+    assert not dlg.setup_box.isVisible() and not dlg.auto_update.isVisible()
+    assert dlg.publish_button.text() == "Uključi link"
+    dlg.use_pin.setChecked(True)
+    dlg.pin.setText("2468")
+    dlg.publish_button.click()
+    assert w.lan.running
+    url = dlg.url.text()
+    assert url.startswith("http://") and "/p/" in url
+    assert QApplication.clipboard().text() == url
+
+    token = url.rsplit("/", 1)[1]
+    base = f"http://127.0.0.1:{w.lan.server.port}"
+    with httpx.Client(base_url=base, timeout=5) as client:
+        assert "Unesi PIN" in client.get(f"/p/{token}").text
+        client.post(f"/p/{token}/unlock", data={"pin": "2468"})
+        assert (
+            client.post(f"/api/comments/{token}", json={"text": "Izgleda dobro"}).status_code == 201
+        )
+    qtbot.waitUntil(lambda: "komentar" in w.header.share_button.text(), timeout=3000)
+
+    dlg.revoke_button.click()
+    assert not w.lan.running
+    with httpx.Client(base_url=base, timeout=2) as client:
+        with pytest.raises(httpx.TransportError):
+            client.get(f"/p/{token}")
+    w.close()
+
+
+def _free_port() -> int:
+    import socket
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]

@@ -241,6 +241,12 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon(str(icon_path)))
         self.reminders = ReminderManager(self.ctx, self, self.windowIcon())
 
+        from app.ui.lan_share import LanShare
+
+        self.lan = LanShare(self.ctx, self)
+        self.ctx.lan = self.lan
+        self.lan.sync()
+
     # --- sastavljanje ----------------------------------------------------------------------------
 
     def _make_views(self) -> list[ProjectView]:
@@ -371,6 +377,7 @@ class MainWindow(QMainWindow):
             set_setting(s, "last_project_id", pid)
             s.commit()
         self.reminders.shutdown()
+        self.lan.stop()
         super().closeEvent(event)
 
     def shortcuts(self) -> None:
@@ -488,6 +495,8 @@ class MainWindow(QMainWindow):
 
         with self.ctx.session() as s:
             link = sharing.active_link(s, pid)
+            if sharing.mode(s) != "cloud":
+                return
             if not (link and link.auto_update and link.last_published_at and sharing.configured(s)):
                 return
 
@@ -509,7 +518,7 @@ class MainWindow(QMainWindow):
         from app.ui import background
 
         with self.ctx.session() as s:
-            if not sharing.configured(s):
+            if sharing.mode(s) != "cloud" or not sharing.configured(s):
                 return
 
         def work(s):
