@@ -46,8 +46,8 @@ app/
     background.py      mrežni poslovi u QThreadPool-u (sopstvena sesija po poslu)
     views/             dashboard_view, list_view, kanban_view, budget_view, registry_view,
                        gantt/ (chart, items, model; load_chart_data koristi i PDF)
-    dialogs/           project (sa šablonom), task (7 tabova: Detalji, Koraci, ... Vreme), milestone, cost,
-                       budget, share, settings (+ lists_tab: Liste predloga), restore, templates,
+    dialogs/           project (sa šablonom), task (7 tabova, i Koraci i Vreme), milestone,
+                       cost, budget, share, settings (+ lists_tab: Liste predloga), restore, templates,
                        registry_dialogs (rizik, osoba, dokument, odluka)
     widgets/           card (kartica sa senkom), kpi (brojka + ikonica), fields (SuggestCombo:
                        lista predloga + proizvoljan unos), paint
