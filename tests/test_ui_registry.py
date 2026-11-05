@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QMessageBox
 
 from app.db.models import RiskStatus, TaskStatus
@@ -98,3 +99,55 @@ def test_task_dialog_new_fields_and_blocked_status(window):
     values = dlg.values()
     assert values["owner"] == "Spoljni konsultant" and values["phase"] == "Ugovaranje"
     dlg.close()
+
+
+def test_task_steps_tab_and_parent_grouping(window):
+    from app.ui.dialogs.task_dialog import TaskDialog
+
+    with window.ctx.session() as s:
+        from app.services import tasks as task_service
+
+        dev = next(
+            t
+            for t, _ in task_service.tree(s, window.ctx.project_id)
+            if t.title == "Razvoj integracije"
+        )
+        dev_id = dev.id
+    dlg = TaskDialog(window.ctx, dev_id, window)
+    # postojeći koraci + predlozi za vrstu rada Integracija (bez onih koji već postoje)
+    assert [s["title"] for s in dlg._steps][0] == "Analiza API dokumentacije"
+    assert "Analiza API dokumentacije" not in dlg._step_suggestions()
+    assert "Mapiranje polja, statusa i kodova grešaka" in dlg._step_suggestions()
+    assert dlg.tabs.tabText(1) == "Koraci 0/4"
+    dlg.step_input.setCurrentText("Dogovor o formatu callback-a")
+    dlg._add_step()
+    dlg.steps_list.item(0).setCheckState(Qt.CheckState.Checked)
+    assert dlg.tabs.tabText(1) == "Koraci 1/5"
+    # „Deo zadatka“: zadaci iz iste faze su prvi
+    dlg.phase.setCurrentText("Discovery i analiza")
+    labels = [dlg.parent_combo.itemText(i) for i in range(dlg.parent_combo.count())]
+    assert labels[0].startswith("Samostalan") and labels[2] == "Faza Discovery i analiza"
+    assert labels[3] == "KYB dokumentacija partnera" and "Ostale faze" in labels
+    dlg.phase.setCurrentText("Razvoj i integracija")
+    dlg._save()
+    with window.ctx.session() as s:
+        steps = {c.title: c.status for c in task_service.get(s, dev_id).subtasks}
+    assert steps["Analiza API dokumentacije"] == TaskStatus.DONE
+    assert "Dogovor o formatu callback-a" in steps
+
+
+def test_new_task_with_suggested_steps(window):
+    from app.ui.dialogs.task_dialog import TaskDialog
+
+    dlg = TaskDialog(window.ctx, None, window)
+    dlg.title_edit.setText("Uvođenje plaćanja QR kodom")
+    dlg.work_type.setCurrentText("Razvoj")
+    dlg._add_suggested_steps()
+    n = len(dlg._steps)
+    assert n >= 8
+    dlg._save()
+    with window.ctx.session() as s:
+        from app.services import tasks as task_service
+
+        task = task_service.get(s, dlg.task_id)
+        assert len(task.subtasks) == n and task.subtasks[0].work_type == "Razvoj"

@@ -208,6 +208,16 @@ def seed(session: Session, today: date | None = None) -> Project:
         phase="Razvoj i integracija",
         work="Integracija",
     )
+    # koraci razvoja integracije (podzadaci), od analize do internog testa
+    for i, (title, s0, s1, owner) in enumerate(
+        (
+            ("Analiza API dokumentacije", 10, 12, "Backend"),
+            ("Integracija sa API-jem (sandbox)", 12, 18, "Backend"),
+            ("Razvoj novih feature-a u TNapp", 15, 21, "Mobilni tim"),
+            ("Interno testiranje integracije", 21, 24, "QA"),
+        )
+    ):
+        task(title, s0, s1, parent=dev, order=i, owner=owner, work="Integracija")
     content = task(
         "Ugovor o saradnji i SLA",
         10,

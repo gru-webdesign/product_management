@@ -369,6 +369,11 @@ QCheckBox::indicator:hover {{ border-color: {t.accent}; }}
 QCheckBox::indicator:checked {{ background: {t.accent}; border-color: {t.accent};
     image: url({_icon("check-white")}); }}
 QCheckBox::indicator:disabled {{ background: {t.surface_alt}; border-color: {t.border}; }}
+QListWidget::indicator {{ width: 15px; height: 15px; border: 1px solid {t.border_strong};
+    border-radius: 4px; background: {t.surface}; }}
+QListWidget::indicator:checked {{ background: {t.accent}; border-color: {t.accent};
+    image: url({_icon("check-white")}); }}
+QListWidget#Steps::item {{ padding: 5px 4px; }}
 QGroupBox {{ border: 1px solid {t.border}; border-radius: 10px; margin-top: 14px;
     padding: 12px; font-weight: 600; }}
 QGroupBox::title {{ subcontrol-origin: margin; left: 10px; padding: 0 4px; }}

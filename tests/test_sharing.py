@@ -70,7 +70,7 @@ def project(session):
 def test_snapshot_contains_only_shared_data(session, project):
     data = snapshot.build(session, project.id, ShareOptions(), today=date(2026, 11, 2))
     assert data["project"]["name"] == project.name
-    assert len(data["tasks"]) == 10 and len(data["deps"]) == 8 and len(data["milestones"]) == 2
+    assert len(data["tasks"]) == 14 and len(data["deps"]) == 8 and len(data["milestones"]) == 2
     assert "budget" not in data
     dumped = json.dumps(data, ensure_ascii=False)
     assert "Klijent želi toplije boje" not in dumped  # beleške se ne dele

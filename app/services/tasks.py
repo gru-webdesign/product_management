@@ -106,6 +106,35 @@ def descendant_ids(task: Task) -> set[str]:
     return out
 
 
+def add_steps(session: Session, parent: Task, titles: list[str]) -> list[Task]:
+    """Dodaje korake (podzadatke) zadatku. Korak nasleđuje nosioca, fazu, vrstu rada i datume.
+
+    Korak koji već postoji pod istim nazivom se preskače.
+    """
+    existing = {s.title.casefold() for s in parent.subtasks}
+    created: list[Task] = []
+    for title in titles:
+        title = " ".join(title.split())
+        if not title or title.casefold() in existing:
+            continue
+        existing.add(title.casefold())
+        created.append(
+            create(
+                session,
+                parent.project_id,
+                title=title,
+                parent_id=parent.id,
+                owner=parent.owner,
+                phase=parent.phase,
+                work_type=parent.work_type,
+                start_date=parent.start_date,
+                due_date=parent.due_date,
+                priority=parent.priority,
+            )
+        )
+    return created
+
+
 def _next_order(session: Session, project_id: str, parent_id: str | None) -> int:
     stmt = select(func.max(Task.sort_order)).where(Task.project_id == project_id)
     stmt = stmt.where(

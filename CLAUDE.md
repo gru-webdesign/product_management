@@ -46,7 +46,7 @@ app/
     background.py      mrežni poslovi u QThreadPool-u (sopstvena sesija po poslu)
     views/             dashboard_view, list_view, kanban_view, budget_view, registry_view,
                        gantt/ (chart, items, model; load_chart_data koristi i PDF)
-    dialogs/           project (sa šablonom), task (6 tabova, i Vreme), milestone, cost,
+    dialogs/           project (sa šablonom), task (7 tabova: Detalji, Koraci, ... Vreme), milestone, cost,
                        budget, share, settings (+ lists_tab: Liste predloga), restore, templates,
                        registry_dialogs (rizik, osoba, dokument, odluka)
     widgets/           card (kartica sa senkom), kpi (brojka + ikonica), fields (SuggestCombo:
@@ -55,7 +55,7 @@ app/
 share_worker/          Cloudflare Worker (src/index.js) + Node testovi + README za postavljanje
 installer/             etapa.spec (PyInstaller), setup.iss (Inno Setup), icon.ico, launch.py
 scripts/               seed_demo.py, screenshots.py, build.ps1
-tests/                 138 testova (servisi + UI preko pytest-qt, bez prozora)
+tests/                 140 testova (servisi + UI preko pytest-qt, bez prozora)
 ```
 
 ## Pravila koda
@@ -146,6 +146,8 @@ v1.1 (verzija 1.1.0):
   budžeta + nova iz dijaloga troška, 8 valuta, rizici na Pregledu i u PDF/Excel izveštaju
 - [x] Liste predloga (Podešavanja → Liste, Projekat → Liste predloga): partneri, organizacije,
   ljudi, vrste, faze; seed_demo briše stare demo projekte (sajt)
+- [x] Tab Koraci u zadatku (podzadaci sa štikliranjem, predlozi po vrsti rada iz
+  `labels.STEPS`, `tasks.add_steps`); „Deo zadatka“ nudi prvo zadatke iz iste faze
 
 Šta korisnik treba sam da uradi (traži njegov nalog/računar):
 - `scripts\build.ps1` na Windows-u (treba Inno Setup 6) → instaler

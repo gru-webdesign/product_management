@@ -321,3 +321,208 @@ def display_value(field: str, value) -> str:
     if hasattr(value, "strftime"):
         return value.strftime("%d.%m.%Y.")
     return str(value)
+
+
+# Predloženi koraci (podzadaci) po vrsti rada: tab Koraci u dijalogu zadatka.
+STEPS: dict[str, list[str]] = {
+    "Integracija": [
+        "Analiza API dokumentacije",
+        "Pristup sandbox okruženju i ključevi",
+        "Mapiranje polja, statusa i kodova grešaka",
+        "Integracija sa API-jem (sandbox)",
+        "Razvoj novih feature-a u TNapp",
+        "Obrada grešaka, ponavljanja i timeout-a",
+        "Logovanje i monitoring",
+        "Interno testiranje integracije",
+        "Code review",
+        "Sertifikacija kod partnera",
+        "Prelazak na produkcione ključeve",
+    ],
+    "Razvoj": [
+        "Tehnička analiza i procena",
+        "Dizajn rešenja (arhitektura, baza)",
+        "Razvoj backend dela",
+        "Razvoj frontend dela",
+        "Razvoj novih feature-a",
+        "Unit testovi",
+        "Code review",
+        "Deploy na test okruženje",
+        "Ispravke posle testiranja",
+        "Tehnička dokumentacija",
+    ],
+    "Analiza": [
+        "Prikupljanje postojećih podataka i dokumentacije",
+        "Razgovori sa zainteresovanim stranama",
+        "Analiza trenutnog stanja (as-is)",
+        "Predlog ciljnog stanja (to-be)",
+        "Gap analiza",
+        "Zaključci i preporuke",
+    ],
+    "Poslovni zahtevi": [
+        "Radionica sa poslovnim stranama",
+        "Korisničke priče i slučajevi korišćenja",
+        "Kriterijumi prihvatanja",
+        "Prioritizacija zahteva",
+        "Odobrenje zahteva",
+    ],
+    "Specifikacija": [
+        "Funkcionalna specifikacija",
+        "Tokovi i dijagrami procesa",
+        "Pravila validacije i greške",
+        "Nefunkcionalni zahtevi (performanse, bezbednost)",
+        "Pregled specifikacije sa razvojem",
+        "Odobrenje specifikacije",
+    ],
+    "Dokumentacija": [
+        "Struktura dokumenta",
+        "Prva verzija",
+        "Interni pregled",
+        "Izmene po komentarima",
+        "Odobrenje i objava verzije",
+    ],
+    "Istraživanje": [
+        "Ciljevi i pitanja istraživanja",
+        "Izbor metode i uzorka",
+        "Regrutacija ispitanika",
+        "Intervjui ili anketa",
+        "Sinteza nalaza",
+        "Prezentacija i preporuke",
+    ],
+    "Analitika i podaci": [
+        "Definicija metrika i KPI",
+        "Izvori podataka i pristup",
+        "Izvlačenje i čišćenje podataka",
+        "Analiza",
+        "Dashboard ili izveštaj",
+        "Provera brojki sa poslovnim stranama",
+    ],
+    "UX i dizajn": [
+        "Korisnički tokovi",
+        "Wireframe",
+        "Vizuelni dizajn ekrana",
+        "Prototip",
+        "Test upotrebljivosti",
+        "Predaja dizajna razvoju",
+    ],
+    "Testiranje i QA": [
+        "Plan testiranja",
+        "Test slučajevi",
+        "Priprema test podataka",
+        "Funkcionalno testiranje",
+        "Regresiono testiranje",
+        "Prijava i praćenje grešaka",
+        "Izveštaj o testiranju",
+    ],
+    "UAT": [
+        "UAT scenariji",
+        "Priprema okruženja i korisnika",
+        "Izvođenje UAT-a",
+        "Ispravke grešaka",
+        "Potpisan UAT zapisnik",
+    ],
+    "Bezbednost": [
+        "Procena bezbednosnih rizika",
+        "Pregled pristupa i ovlašćenja",
+        "Penetracioni test",
+        "Ispravke ranjivosti",
+        "Odobrenje bezbednosti",
+    ],
+    "Usklađenost (compliance)": [
+        "Identifikacija propisa i obaveza",
+        "Gap analiza",
+        "Ažuriranje politika i procedura",
+        "Pregled Compliance službe",
+        "Odobrenje Compliance-a",
+    ],
+    "AML i KYC": [
+        "Prikupljanje KYB/KYC dokumentacije",
+        "Provera stvarnih vlasnika",
+        "Provera sankcionih lista i PEP",
+        "Procena rizika",
+        "Odobrenje AML službe",
+    ],
+    "Pravno i ugovori": [
+        "Nacrt ugovora",
+        "Pravni pregled",
+        "Pregovori i izmene",
+        "Interno odobrenje",
+        "Potpisivanje",
+    ],
+    "Puštanje u rad": [
+        "Plan puštanja i povratka (rollback)",
+        "Go/no-go sastanak",
+        "Deploy na produkciju",
+        "Smoke test na produkciji",
+        "Obaveštenje korisnicima i podršci",
+        "Praćenje prvih dana (hypercare)",
+    ],
+    "Obuka": [
+        "Materijal za obuku",
+        "Termin i učesnici",
+        "Održana obuka",
+        "Provera znanja",
+    ],
+    "Komunikacija": [
+        "Poruka i kanali",
+        "Tekst i vizuali",
+        "Odobrenje",
+        "Objava",
+    ],
+    "Marketing": [
+        "Brief",
+        "Kreativa",
+        "Plan kanala i budžeta",
+        "Objava kampanje",
+        "Merenje rezultata",
+    ],
+    "Finansije": [
+        "Procena troškova",
+        "Odobrenje budžeta",
+        "Narudžbenica ili ugovor",
+        "Praćenje troškova",
+    ],
+    "Nabavka": [
+        "Specifikacija potrebe",
+        "Prikupljanje ponuda",
+        "Izbor dobavljača",
+        "Ugovor ili narudžbenica",
+    ],
+    "Infrastruktura": [
+        "Zahtev za resurse",
+        "Podešavanje okruženja",
+        "Mreža, firewall i pristupi",
+        "Backup i monitoring",
+    ],
+    "Izveštavanje": [
+        "Prikupljanje podataka",
+        "Priprema izveštaja",
+        "Pregled",
+        "Slanje",
+    ],
+    "Sastanak": [
+        "Agenda",
+        "Održan sastanak",
+        "Zapisnik i zaduženja",
+    ],
+    "Odobrenje": [
+        "Priprema materijala za odobrenje",
+        "Prezentacija donosiocu odluke",
+        "Doneta odluka",
+    ],
+    "Podrška": [
+        "Uputstvo za podršku",
+        "Obuka podrške",
+        "Praćenje prijava",
+    ],
+}
+
+GENERIC_STEPS = ["Priprema", "Izrada", "Pregled", "Ispravke", "Završetak i predaja"]
+
+
+def steps_for(work_type: str) -> list[str]:
+    """Predlozi koraka za vrstu rada; nepoznata vrsta dobija opšte korake."""
+    key = (work_type or "").strip().casefold()
+    for name, steps in STEPS.items():
+        if name.casefold() == key:
+            return steps
+    return GENERIC_STEPS

@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.db.models import DependencyType, Priority, Task, TaskStatus
-from app.labels import DEPENDENCY_TYPE, FIELD, PRIORITY, TASK_STATUS
+from app.labels import DEPENDENCY_TYPE, FIELD, PRIORITY, TASK_STATUS, steps_for
 from app.services import activity, suggestions
 from app.services import dependencies as dep_service
 from app.services import tasks as task_service
@@ -73,11 +73,27 @@ class TaskDialog(QDialog):
             if task:
                 self.project_id = task.project_id
             excluded = ({task.id} | task_service.descendant_ids(task)) if task else set()
+            # kandidati za „Deo zadatka“: (id, naziv, dubina, faza)
             self._parents = [
-                (t.id, ("    " * depth) + t.title)
+                (t.id, t.title, depth, t.phase)
                 for t, depth in task_service.tree(s, self.project_id)
                 if t.id not in excluded
             ]
+            # postojeći koraci (podzadaci): id, naziv, završen, nosilac
+            self._steps = (
+                [
+                    {
+                        "id": c.id,
+                        "title": c.title,
+                        "done": c.status == TaskStatus.DONE,
+                        "owner": c.owner,
+                        "was_done": c.status == TaskStatus.DONE,
+                    }
+                    for c in sorted(task.subtasks, key=lambda c: c.sort_order)
+                ]
+                if task
+                else []
+            )
             self._all_tags = task_service.all_tags(s)
             self._suggest = {
                 f: suggestions.for_field(s, f) for f in ("work_type", "phase", "people")
@@ -98,6 +114,8 @@ class TaskDialog(QDialog):
 
         self.tabs = QTabWidget()
         self.tabs.addTab(self._details_tab(data, defaults), "Detalji")
+        self.tabs.addTab(self._steps_tab(), "Koraci")
+        self._render_steps()
         if task_id:
             self.tabs.addTab(self._notes_tab(), "Beleške")
             self.tabs.addTab(self._deps_tab(), "Zavisnosti")
@@ -245,19 +263,176 @@ class TaskDialog(QDialog):
         form.addRow("Tagovi", self.tags)
 
         self.parent_combo = QComboBox()
-        self.parent_combo.addItem("Nema (glavni zadatak)", None)
-        for pid, label in self._parents:
-            self.parent_combo.addItem(label, pid)
-        wanted = d.get("parent_id", defaults.get("parent_id"))
-        idx = self.parent_combo.findData(wanted) if wanted else 0
-        self.parent_combo.setCurrentIndex(max(0, idx))
-        form.addRow("Nadređeni", self.parent_combo)
+        self.parent_combo.setMaxVisibleItems(18)
+        self.parent_combo.setToolTip(
+            "Ako je ovaj zadatak korak većeg zadatka, izaberi taj zadatak. "
+            "Prvo su ponuđeni zadaci iz iste faze."
+        )
+        self._fill_parents(d.get("parent_id", defaults.get("parent_id")))
+        self.phase.currentTextChanged.connect(self._phase_changed)
+        form.addRow("Deo zadatka", self.parent_combo)
 
         self.description = QPlainTextEdit(d.get("description", ""))
         self.description.setPlaceholderText("Opis, kriterijumi prihvatanja, linkovi, napomene…")
         self.description.setMinimumHeight(80)
         form.addRow("Opis", self.description)
         return w
+
+    def _fill_parents(self, wanted: str | None) -> None:
+        """Zadaci iz iste faze su na vrhu, ostali ispod; faza piše pored naziva."""
+        phase = self.phase.value().casefold()
+        combo = self.parent_combo
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem("Samostalan zadatak (nije deo drugog)", None)
+        same = [p for p in self._parents if phase and (p[3] or "").casefold() == phase]
+        rest = [p for p in self._parents if p not in same]
+        for group, header in ((same, f"Faza {self.phase.value()}"), (rest, "Ostale faze")):
+            if not group:
+                continue
+            if same:
+                combo.insertSeparator(combo.count())
+                combo.addItem(header, "__header__")
+                item = combo.model().item(combo.count() - 1)
+                item.setEnabled(False)
+            for pid, title, depth, ph in group:
+                label = ("    " * depth) + title
+                if ph and group is rest:
+                    label += f"   ·  {ph}"
+                combo.addItem(label, pid)
+        idx = combo.findData(wanted) if wanted else 0
+        combo.setCurrentIndex(max(0, idx))
+        combo.blockSignals(False)
+
+    def _phase_changed(self, _text: str) -> None:
+        self._fill_parents(self.parent_combo.currentData())
+
+    # --- koraci (podzadaci) ---
+    def _steps_tab(self) -> QWidget:
+        w = QWidget()
+        lay = QVBoxLayout(w)
+        lay.setContentsMargins(4, 12, 4, 4)
+        hint = QLabel(
+            "Koraci su podzadaci ovog zadatka, od početka do kraja. Štikliraj završene; "
+            "napredak zadatka se vidi u Listi, Kanbanu i Gantu."
+        )
+        hint.setWordWrap(True)
+        hint.setProperty("muted", True)
+        lay.addWidget(hint)
+        self.steps_list = QListWidget()
+        self.steps_list.setObjectName("Steps")
+        self.steps_list.itemChanged.connect(self._step_toggled)
+        lay.addWidget(self.steps_list, 1)
+
+        row = QHBoxLayout()
+        self.step_input = SuggestCombo([], "", "Novi korak: izaberi predlog ili upiši")
+        self.step_input.lineEdit().returnPressed.connect(self._add_step)
+        add = QPushButton("Dodaj")
+        add.clicked.connect(self._add_step)
+        row.addWidget(self.step_input, 1)
+        row.addWidget(add)
+        lay.addLayout(row)
+        row2 = QHBoxLayout()
+        self.suggest_steps = QPushButton()
+        self.suggest_steps.setIcon(icons.icon("plus"))
+        self.suggest_steps.clicked.connect(self._add_suggested_steps)
+        self.remove_step = QPushButton("Ukloni novi korak")
+        self.remove_step.setToolTip("Uklanja korak koji još nije sačuvan")
+        self.remove_step.clicked.connect(self._remove_step)
+        row2.addWidget(self.suggest_steps)
+        row2.addStretch(1)
+        row2.addWidget(self.remove_step)
+        lay.addLayout(row2)
+        self.work_type.currentTextChanged.connect(self._refresh_step_suggestions)
+        self._render_steps()
+        self._refresh_step_suggestions()
+        return w
+
+    def _render_steps(self) -> None:
+        self.steps_list.blockSignals(True)
+        self.steps_list.clear()
+        for i, step in enumerate(self._steps):
+            text = step["title"] + (f"   ·  {step['owner']}" if step.get("owner") else "")
+            if not step["id"]:
+                text += "   (novo)"
+            item = QListWidgetItem(text)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.CheckState.Checked if step["done"] else Qt.CheckState.Unchecked)
+            item.setData(Qt.ItemDataRole.UserRole, i)
+            self.steps_list.addItem(item)
+        self.steps_list.blockSignals(False)
+        i = self.tabs.indexOf(self.steps_list.parentWidget()) if hasattr(self, "tabs") else -1
+        if i >= 0:
+            done = sum(s["done"] for s in self._steps)
+            self.tabs.setTabText(
+                i, f"Koraci {done}/{len(self._steps)}" if self._steps else "Koraci"
+            )
+
+    def _step_suggestions(self) -> list[str]:
+        have = {s["title"].casefold() for s in self._steps}
+        return [x for x in steps_for(self.work_type.value()) if x.casefold() not in have]
+
+    def _refresh_step_suggestions(self, *_args) -> None:
+        free = self._step_suggestions()
+        text = self.step_input.currentText()
+        self.step_input.clear()
+        self.step_input.addItems(free)
+        self.step_input.setCurrentIndex(-1)
+        self.step_input.setCurrentText(text)
+        kind = self.work_type.value() or "opšti"
+        self.suggest_steps.setText(f"Dodaj predložene korake za: {kind} ({len(free)})")
+        self.suggest_steps.setEnabled(bool(free))
+
+    def _append_step(self, title: str) -> bool:
+        title = " ".join(title.split())
+        if not title or title.casefold() in {s["title"].casefold() for s in self._steps}:
+            return False
+        self._steps.append(
+            {"id": None, "title": title, "done": False, "owner": "", "was_done": False}
+        )
+        return True
+
+    def _add_step(self) -> None:
+        if self._append_step(self.step_input.currentText()):
+            self.step_input.setCurrentText("")
+            self._render_steps()
+            self._refresh_step_suggestions()
+
+    def _add_suggested_steps(self) -> None:
+        for title in self._step_suggestions():
+            self._append_step(title)
+        self._render_steps()
+        self._refresh_step_suggestions()
+
+    def _remove_step(self) -> None:
+        item = self.steps_list.currentItem()
+        if item is None:
+            return
+        step = self._steps[item.data(Qt.ItemDataRole.UserRole)]
+        if step["id"]:
+            self._fail("Sačuvan korak se briše iz Liste (desni klik na podzadatak).")
+            return
+        self._steps.remove(step)
+        self._render_steps()
+        self._refresh_step_suggestions()
+
+    def _step_toggled(self, item: QListWidgetItem) -> None:
+        step = self._steps[item.data(Qt.ItemDataRole.UserRole)]
+        step["done"] = item.checkState() == Qt.CheckState.Checked
+        self._render_steps()
+
+    def _save_steps(self, s, task) -> None:
+        """Novi koraci se prave, a štiklirani/odštiklirani menjaju status."""
+        new = [st["title"] for st in self._steps if not st["id"]]
+        created = {c.title: c for c in task_service.add_steps(s, task, new)}
+        for st in self._steps:
+            target = task_service.get(s, st["id"]) if st["id"] else created.get(st["title"])
+            if target is None:
+                continue
+            if st["done"] and target.status != TaskStatus.DONE:
+                task_service.update(s, target, status=TaskStatus.DONE, progress=100)
+            elif not st["done"] and st["was_done"]:
+                task_service.update(s, target, status=TaskStatus.TODO)
 
     def _notes_tab(self) -> QWidget:
         w = QWidget()
@@ -495,7 +670,11 @@ class TaskDialog(QDialog):
             **({} if self._has_time else {"actual_hours": self.actual.value() or None}),
             "progress": self.progress.value(),
             "planned_cost_minor": self.cost.value_minor() if self.cost.is_valid() else -1,
-            "parent_id": self.parent_combo.currentData(),
+            "parent_id": (
+                None
+                if self.parent_combo.currentData() == "__header__"
+                else self.parent_combo.currentData()
+            ),
             "description": self.description.toPlainText().strip(),
             "tags": [t for t in self.tags.text().split(",") if t.strip()],
             "work_type": self.work_type.value(),
@@ -523,11 +702,14 @@ class TaskDialog(QDialog):
                 if just_done and changes["progress"] == task.progress:
                     changes["progress"] = 100
                 task_service.update(s, task, **changes)
+                self._save_steps(s, task)
                 return task.id
             tags = values.pop("tags")
             if values["status"] == TaskStatus.DONE:
                 values["progress"] = 100
-            return task_service.create(s, self.project_id, tags=tags, **values).id
+            task = task_service.create(s, self.project_id, tags=tags, **values)
+            self._save_steps(s, task)
+            return task.id
 
         result = self.ctx.run(work, self)
         if result:

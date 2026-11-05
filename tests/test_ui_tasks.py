@@ -42,12 +42,12 @@ def all_items(tree):
 def test_tree_shows_all_tasks_with_subtasks(window):
     view = list_view(window)
     assert view.tree.topLevelItemCount() == 8
-    assert len(all_items(view.tree)) == 10
+    assert len(all_items(view.tree)) == 14
     design = next(
         i for i in all_items(view.tree) if i.text(C_TITLE) == "AML procena rizika partnera"
     )
     assert design.childCount() == 2 and design.isExpanded()
-    assert view.count_label.text() == "10 zadataka"
+    assert view.count_label.text() == "14 zadataka"
 
 
 def test_filters_switch_to_flat_list(window):
@@ -57,7 +57,7 @@ def test_filters_switch_to_flat_list(window):
     assert titles == ["Početni sastanak i obim saradnje", "KYB dokumentacija partnera"]
     assert view.clear_button.isVisible()
     view.clear_filters()
-    assert len(all_items(view.tree)) == 10
+    assert len(all_items(view.tree)) == 14
 
 
 def test_search_from_header(window, qtbot):
@@ -104,7 +104,7 @@ def test_new_task_dialog_saves(window, qtbot):
         assert task.priority == Priority.HIGH
         assert task.planned_cost_minor == 150050
         assert sorted(t.name for t in task.tags) == ["novo", "razvoj"]
-    assert len(all_items(list_view(window).tree)) == 11
+    assert len(all_items(list_view(window).tree)) == 15
 
 
 def test_dialog_validation_message(window, qtbot):
@@ -129,7 +129,7 @@ def test_edit_dialog_mark_done_and_dependency(window, qtbot):
         rid = review.id
     dlg = TaskDialog(window.ctx, rid, window)
     qtbot.addWidget(dlg)
-    assert dlg.tabs.count() == 6
+    assert dlg.tabs.count() == 7
     assert dlg.deps_list.count() == 1  # čeka na AML procena rizika partnera
     dlg.note_edit.setText("Poslat mejl klijentu")
     dlg._add_note()

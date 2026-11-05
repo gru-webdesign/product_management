@@ -192,7 +192,7 @@ def test_csv_export(setup, tmp_path):
         text = export_csv.tasks_csv(s, w.ctx.project_id)
         costs = export_csv.costs_csv(s, w.ctx.project_id)
     rows = list(csv.reader(io.StringIO(text), delimiter=";"))
-    assert rows[0][1] == "Naziv" and len(rows) == 11
+    assert rows[0][1] == "Naziv" and len(rows) == 15
     assert any(r[1].strip() == "Provera stvarnih vlasnika" and r[0] == "1" for r in rows)
     cost_rows = list(csv.reader(io.StringIO(costs), delimiter=";"))
     figma = next(r for r in cost_rows if r[4] == "Atlassian")

@@ -65,7 +65,7 @@ def test_save_project_as_template_and_reuse(session):
     src = seed(session, today=D)
     t = templates.save_from_project(session, src.id, "Moj šablon", "za picerije")
     infos = templates.list_templates(session)
-    assert any(i.id == t.id and i.task_count == 10 and not i.builtin for i in infos)
+    assert any(i.id == t.id and i.task_count == 14 and not i.builtin for i in infos)
     assert sum(1 for i in infos if i.builtin) == 8
     dst = projects_svc.create(session, name="Kopija")
     start = D + timedelta(days=30)
@@ -133,7 +133,7 @@ def test_export_xlsx(session, tmp_path):
         "Odluke",
     ]
     zad = wb["Zadaci"]
-    assert zad.max_row == 11 and zad["D2"].value.date() == p.tasks[0].start_date
+    assert zad.max_row == 15 and zad["D2"].value.date() == p.tasks[0].start_date
     assert zad["K1"].value == "Nosilac" and zad["K2"].value == "Product"
     assert wb["Rizici i problemi"].max_row == 6 and wb["Odluke"].max_row == 3
     doc = wb["Dokumenta"]

@@ -82,8 +82,8 @@ def visible(chart, bar: TaskBarItem):
 def test_rows_bars_and_dependencies_drawn(gantt):
     _, view = gantt
     chart = view.chart
-    assert len(chart.rows) == 10
-    assert len(chart.bars) == 10
+    assert len(chart.rows) == 14
+    assert len(chart.bars) == 14
     assert len(chart.dep_items) == 8
     assert len(chart.milestones) == 2
 

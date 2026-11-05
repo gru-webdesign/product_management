@@ -33,14 +33,14 @@ def counts(view):
 def test_columns_filled(kanban):
     _, view = kanban
     assert counts(view) == {
-        TaskStatus.TODO: 5,
+        TaskStatus.TODO: 9,
         TaskStatus.IN_PROGRESS: 2,
         TaskStatus.REVIEW: 0,
         TaskStatus.BLOCKED: 1,
         TaskStatus.ON_HOLD: 0,
         TaskStatus.DONE: 2,
     }
-    assert view.columns[TaskStatus.TODO].count.text() == "5"
+    assert view.columns[TaskStatus.TODO].count.text() == "9"
     assert len(view.columns) == 6  # i Blokirano i Na čekanju
 
 
