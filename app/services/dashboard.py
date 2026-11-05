@@ -12,7 +12,7 @@ from app.db.models import ActivityLog, Milestone, Project, Task, TaskStatus, Tim
 from app.labels import FIELD
 from app.services import budget as budget_service
 from app.services import projects as project_service
-from app.services import sharing
+from app.services import registry, sharing
 from app.services import timetracking as tt
 
 
@@ -33,6 +33,10 @@ class ProjectCard:
     next_milestone_date: date | None
     unread: int
     end_date: date | None
+    project_type: str = ""
+    open_risks: int = 0  # otvoreni rizici i problemi
+    critical_risks: int = 0  # ocena 12 ili više
+    blocked: int = 0  # zadaci u statusu Blokirano
 
 
 @dataclass
@@ -90,6 +94,18 @@ class Overview:
         return sum(p.overdue for p in self.projects)
 
     @property
+    def open_risks(self) -> int:
+        return sum(p.open_risks for p in self.projects)
+
+    @property
+    def critical_risks(self) -> int:
+        return sum(p.critical_risks for p in self.projects)
+
+    @property
+    def blocked_tasks(self) -> int:
+        return sum(p.blocked for p in self.projects)
+
+    @property
     def hours_this_week(self) -> float:
         return sum(h for *_, h in self.week_hours)
 
@@ -98,7 +114,15 @@ def build(session: Session, today: date | None = None, horizon_days: int = 14) -
     today = today or date.today()
     ov = Overview(today=today)
     active = [p for p in project_service.list_projects(session) if not p.archived]
+    blocked = dict(
+        session.execute(
+            select(Task.project_id, func.count(Task.id))
+            .where(Task.status == TaskStatus.BLOCKED)
+            .group_by(Task.project_id)
+        ).all()
+    )
     for p in active:
+        reg = registry.summary(session, p.id)
         done, total, pct = project_service.progress(session, p.id)
         overdue = len(
             list(
@@ -135,6 +159,10 @@ def build(session: Session, today: date | None = None, horizon_days: int = 14) -
                 next_milestone_date=ms.date if ms else None,
                 unread=sharing.unread_count(session, p.id),
                 end_date=p.end_date,
+                project_type=p.project_type,
+                open_risks=reg.open_risks + reg.open_issues,
+                critical_risks=reg.critical_risks,
+                blocked=blocked.get(p.id, 0),
             )
         )
 

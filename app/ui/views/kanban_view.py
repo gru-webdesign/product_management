@@ -59,6 +59,8 @@ class CardDelegate(QStyledItemDelegate):
             h += QFontMetrics(small).height() + 2
         h += self._title_rect(width, QFontMetrics(title_font), card.get("title", "")).height()
         h += 8 + 22  # meta red
+        if card.get("owner") or card.get("estimate"):
+            h += QFontMetrics(small).height() + 4
         if card.get("progress"):
             h += 12
         if card.get("tags"):
@@ -102,23 +104,34 @@ class CardDelegate(QStyledItemDelegate):
         used = draw_pill(
             p, meta, PRIORITY[card["priority"]], PRIORITY_COLOR[card["priority"]], small
         )
+        fm_small = QFontMetrics(small)
         if card.get("due"):
             p.setFont(small)
             p.setPen(QColor(t.danger if card["overdue"] else t.muted))
+            room = meta.adjusted(used + 8, 0, 0, 0)
+            text = ("Kasni " if card["overdue"] else "Rok ") + card["due"]
             p.drawText(
-                meta.adjusted(used + 10, 0, 0, 0),
+                room,
                 Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
-                ("Kasni, rok " if card["overdue"] else "Rok ") + card["due"],
-            )
-        if card.get("estimate"):
-            p.setFont(small)
-            p.setPen(QColor(t.faint))
-            p.drawText(
-                meta,
-                Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight,
-                f"{card['estimate']:g} h",
+                fm_small.elidedText(text, Qt.TextElideMode.ElideRight, room.width()),
             )
         y += 22
+        if card.get("owner") or card.get("estimate"):
+            line = QRect(x, y + 4, w, fm_small.height())
+            p.setFont(small)
+            est = f"{card['estimate']:g} h" if card.get("estimate") else ""
+            est_w = fm_small.horizontalAdvance(est) + 8 if est else 0
+            if est:
+                p.setPen(QColor(t.faint))
+                p.drawText(line, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, est)
+            if card.get("owner"):
+                p.setPen(QColor(t.muted))
+                p.drawText(
+                    line.adjusted(0, 0, -est_w, 0),
+                    Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+                    fm_small.elidedText(card["owner"], Qt.TextElideMode.ElideRight, w - est_w),
+                )
+            y += fm_small.height() + 4
         if card.get("progress"):
             draw_progress(p, QRect(x, y + 2, w, 10), card["progress"], label=False)
             y += 12
@@ -325,6 +338,7 @@ class KanbanView(ProjectView):
                         "progress": task.progress if 0 < task.progress < 100 else 0,
                         "tags": sorted(g.name for g in task.tags),
                         "done": task.status == TaskStatus.DONE,
+                        "owner": task.owner,
                     }
                 )
         for status, frame in self.columns.items():

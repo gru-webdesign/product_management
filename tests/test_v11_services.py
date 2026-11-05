@@ -122,9 +122,22 @@ def test_export_xlsx(session, tmp_path):
     tt.add_entry(session, p.tasks[0].id, D, 1.5, "sastanak")
     path = export_xlsx.write(session, p.id, tmp_path / "x.xlsx")
     wb = load_workbook(path)
-    assert wb.sheetnames == ["Zadaci", "Troškovi i prihodi", "Budžet", "Vreme"]
+    assert wb.sheetnames == [
+        "Zadaci",
+        "Troškovi i prihodi",
+        "Budžet",
+        "Vreme",
+        "Rizici i problemi",
+        "Zainteresovane strane",
+        "Dokumenta",
+        "Odluke",
+    ]
     zad = wb["Zadaci"]
     assert zad.max_row == 11 and zad["D2"].value.date() == p.tasks[0].start_date
+    assert zad["K1"].value == "Nosilac" and zad["K2"].value == "Product"
+    assert wb["Rizici i problemi"].max_row == 6 and wb["Odluke"].max_row == 3
+    doc = wb["Dokumenta"]
+    assert any(c.hyperlink for c in doc["G"])
     budzet = wb["Budžet"]
     total = next(r for r in budzet.iter_rows(values_only=True) if r[0] == "Ukupno")
     assert total[1] == 222000 and abs(total[2] - 124930.8) < 0.001

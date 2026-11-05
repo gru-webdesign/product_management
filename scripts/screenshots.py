@@ -29,13 +29,14 @@ def main() -> int:
     from app.main import bootstrap, set_locale
     from app.ui import theme
     from app.ui.main_window import MainWindow
-    from scripts.seed_demo import seed
+    from scripts.seed_demo import seed, seed_extra
 
     app = QApplication(sys.argv)
     set_locale()
     tmp = tempfile.mkdtemp(prefix="etapa-shots-")
     db = bootstrap(get_paths(Path(tmp)))
     with db.session() as s:
+        seed_extra(s, today=date.today())
         seed(s, today=date.today())
         s.commit()
 

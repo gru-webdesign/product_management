@@ -15,10 +15,12 @@ from PySide6.QtGui import QImage, QPageLayout, QPageSize, QPainter, QPdfWriter, 
 from PySide6.QtWidgets import QApplication
 from sqlalchemy.orm import Session
 
-from app.labels import PRIORITY, PROJECT_STATUS, TASK_STATUS
+from app.db.models import TaskStatus
+from app.labels import DECISION_STATUS, PRIORITY, PROJECT_STATUS, RISK_KIND, TASK_STATUS, risk_level
 from app.services import budget as budget_service
 from app.services import milestones as ms_service
 from app.services import projects as project_service
+from app.services import registry
 from app.services import tasks as task_service
 from app.services import timetracking as tt
 from app.services.money import format_money
@@ -123,8 +125,19 @@ def build_html(
         b = p.end_date.strftime("%d.%m.%Y.") if p.end_date else "?"
         dates = f"{a} - {b}"
     meta = "&nbsp;&nbsp;&nbsp;".join(
-        escape(x) for x in (p.client, PROJECT_STATUS[p.status], dates) if x
+        escape(x) for x in (p.project_type, p.client, PROJECT_STATUS[p.status], dates) if x
     )
+    people = "&nbsp;&nbsp;&nbsp;".join(
+        f"{label}: {escape(value)}"
+        for label, value in (
+            ("Sponzor", p.sponsor),
+            ("Vođa projekta", p.manager),
+            ("Odeljenje", p.department),
+        )
+        if value
+    )
+    if people:
+        meta += f"<br>{people}"
     out = [
         f"""
 <html><body style="font-family:'Geist','Segoe UI',sans-serif;color:{INK};font-size:9.5pt;">
@@ -157,6 +170,7 @@ def build_html(
             [
                 ("Zadatak", "left"),
                 ("Status", "left"),
+                ("Nosilac", "left"),
                 ("Prioritet", "left"),
                 ("Početak", "left"),
                 ("Rok", "left"),
@@ -174,7 +188,11 @@ def build_html(
             + "".join(
                 [
                     _cell(indent + escape(t.title), weight),
-                    _cell(TASK_STATUS[t.status]),
+                    _cell(
+                        TASK_STATUS[t.status],
+                        f"color:{DANGER};" if t.status == TaskStatus.BLOCKED else "",
+                    ),
+                    _cell(escape(t.owner)),
                     _cell(PRIORITY[t.priority]),
                     _cell(t.start_date.strftime("%d.%m.%Y.") if t.start_date else ""),
                     _cell(t.due_date.strftime("%d.%m.%Y.") if t.due_date else "", late),
@@ -199,6 +217,51 @@ def build_html(
                 + _cell(m.date.strftime("%d.%m.%Y."))
                 + _cell(escape(m.name))
                 + _cell("ostvaren" if m.done else "")
+                + "</tr>"
+            )
+        out.append("</table>")
+
+    risks = registry.risks(session, project_id, include_closed=False)
+    if risks:
+        out.append(_h("Otvoreni rizici i problemi") + '<table width="100%" cellspacing="0">')
+        out.append(
+            _head(
+                [
+                    ("Naziv", "left"),
+                    ("Vrsta", "left"),
+                    ("Ocena", "left"),
+                    ("Nosilac", "left"),
+                    ("Mera", "left"),
+                ]
+            )
+        )
+        for r in risks:
+            level = risk_level(r.score)
+            color = DANGER if r.score >= 12 else (WARN if r.score >= 8 else INK)
+            out.append(
+                "<tr>"
+                + _cell(escape(r.title))
+                + _cell(RISK_KIND[r.kind])
+                + _cell(f"{level} ({r.score})", f"color:{color};")
+                + _cell(escape(r.owner))
+                + _cell(escape(r.mitigation))
+                + "</tr>"
+            )
+        out.append("</table>")
+
+    decisions = registry.decisions(session, project_id)
+    if decisions:
+        out.append(_h("Odluke") + '<table width="100%" cellspacing="0">')
+        out.append(
+            _head([("Datum", "left"), ("Odluka", "left"), ("Status", "left"), ("Odobrio", "left")])
+        )
+        for d in decisions:
+            out.append(
+                "<tr>"
+                + _cell(d.decided_on.strftime("%d.%m.%Y."))
+                + _cell(f"<b>{escape(d.title)}</b><br>{escape(d.decision)}")
+                + _cell(DECISION_STATUS[d.status])
+                + _cell(escape(d.approved_by))
                 + "</tr>"
             )
         out.append("</table>")

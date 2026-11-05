@@ -74,15 +74,16 @@ class ProjectHeader(QFrame):
         super().__init__(parent)
         self.ctx = ctx
         self.setObjectName("Header")
-        lay = QHBoxLayout(self)
+        # Gore: naziv levo, pretraga i dugmad desno. Ispod, preko cele širine: meta red.
+        lay = QVBoxLayout(self)
         lay.setContentsMargins(30, 22, 28, 10)
-        lay.setSpacing(10)
-
-        text = QVBoxLayout()
-        text.setSpacing(6)
+        lay.setSpacing(6)
+        top = QHBoxLayout()
+        top.setSpacing(10)
         self.title = QLabel()
         self.title.setObjectName("ProjectTitle")
-        text.addWidget(self.title)
+        top.addWidget(self.title, 1)
+        lay.addLayout(top)
         meta = QHBoxLayout()
         meta.setSpacing(14)
         self.client = QLabel()
@@ -104,8 +105,7 @@ class ProjectHeader(QFrame):
             meta.addWidget(w)
         meta.addLayout(progress)
         meta.addStretch(1)
-        text.addLayout(meta)
-        lay.addLayout(text, 1)
+        lay.addLayout(meta)
 
         self.search = QLineEdit()
         self.search.setObjectName("SearchField")
@@ -116,17 +116,17 @@ class ProjectHeader(QFrame):
         self._debounce = QTimer(self, singleShot=True, interval=200)
         self._debounce.timeout.connect(lambda: ctx.set_search(self.search.text()))
         self.search.textChanged.connect(lambda _t: self._debounce.start())
-        lay.addWidget(self.search)
+        top.addWidget(self.search)
 
         self.share_button = QPushButton("Podeli")
         self.share_button.setIcon(icons.icon("share"))
-        lay.addWidget(self.share_button)
+        top.addWidget(self.share_button)
 
         self.add_task_button = QPushButton("Zadatak")
         self.add_task_button.setProperty("primary", True)
         self.add_task_button.setIcon(icons.icon("plus", theme.tokens().primary_text))
         self.add_task_button.setToolTip("Novi zadatak (Ctrl+N)")
-        lay.addWidget(self.add_task_button)
+        top.addWidget(self.add_task_button)
 
     def reload(self) -> None:
         pid = self.ctx.project_id

@@ -7,16 +7,24 @@ u jednom fajlu na tvom računaru.
 
 ## Šta ima
 
-- **Pregled svih projekata** (Ctrl+0): napredak, budžet, kašnjenja, rokovi u narednih 14 dana,
-  sati po danima ove nedelje
+- **Pregled svih projekata** (Ctrl+0): napredak, budžet, otvoreni rizici, kašnjenja i blokirani
+  zadaci, rokovi u narednih 14 dana, sati po danima ove nedelje
 - **Lista, Kanban i Gant** po projektu: podzadaci, zavisnosti mišem, milestone-i, pomeranje
   zavisnih zadataka, istorija izmena
-- **Budžet**: troškovi i prihodi u RSD/EUR/USD po kursu, kategorije, upozorenja, grafikon
+- **Zadaci** sa nosiocem, fazom i vrstom rada; statusi Za uraditi, U toku, Na pregledu, Blokirano,
+  Na čekanju, Završeno
+- **Registar projekta** (Ctrl+5): rizici i problemi (verovatnoća × uticaj), zainteresovane strane
+  (RACI, uticaj, interes), dokumenta i linkovi, log odluka
+- **Budžet**: troškovi i prihodi u 8 valuta po kursu, 13 kategorija (i nove iz dijaloga),
+  upozorenja, grafikon
 - **Merenje vremena**: tajmer na zadatku (prikazan u statusnoj traci) ili ručni unos sati
-- **Šabloni projekata**: tri ugrađena (sajt, redizajn, kampanja) i tvoji, sačuvani iz
-  postojećeg projekta
+- **Šabloni projekata** po fazama, sa zavisnostima, milestone-ima, budžetom, rizicima, ljudima i
+  dokumentima: onboarding partnera, novi servis u TNapp, integracija sa partnerom, regulatorna
+  usklađenost, istraživanje korisnika, analitika i izveštavanje, kampanja, opšti; i tvoji
+- Padajuće liste sa predlozima uz **proizvoljan unos** (vrsta projekta, faza, nosilac, organizacija)
 - **Podsetnici** za rokove koji ističu ili kasne (obaveštenje u sistemskoj traci)
-- **Izvoz**: PDF izveštaj sa Gantom (Ctrl+P), Excel sa svim podacima, CSV
+- **Izvoz**: PDF izveštaj sa Gantom, rizicima i odlukama (Ctrl+P), Excel sa svim podacima i
+  registrom, CSV
 - **Deljenje linkom u lokalnoj mreži** sa PIN-om i komentarima gledalaca (opciono preko interneta)
 - Svetla i tamna tema
 

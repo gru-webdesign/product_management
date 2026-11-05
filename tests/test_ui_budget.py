@@ -96,3 +96,22 @@ def test_nice_ceiling():
     assert nice_ceiling(137) == 200
     assert nice_ceiling(244) == 250
     assert nice_ceiling(9) == 10
+
+
+def test_cost_dialog_new_category(budget, qtbot, monkeypatch):
+    from PySide6.QtWidgets import QInputDialog
+
+    from app.ui.dialogs.cost_dialog import NEW_CATEGORY
+
+    w, _ = budget
+    dlg = MoneyEntryDialog(w.ctx, "cost", None, w)
+    qtbot.addWidget(dlg)
+    monkeypatch.setattr(QInputDialog, "getText", lambda *a, **k: ("Penetracioni test", True))
+    dlg._category_picked(dlg.category.findData(NEW_CATEGORY))
+    assert dlg.category.currentText() == "Penetracioni test"
+    with w.db.session() as s:
+        names = [c.name for c in budget_service.categories(s)]
+    assert "Penetracioni test" in names
+    monkeypatch.setattr(QInputDialog, "getText", lambda *a, **k: ("", False))
+    dlg._category_picked(dlg.category.findData(NEW_CATEGORY))
+    assert dlg.category.currentText() == "Penetracioni test"  # otkazano: ostaje prethodni izbor

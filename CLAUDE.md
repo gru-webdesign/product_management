@@ -30,7 +30,9 @@ app/
   db/migrations/       Alembic (versions/ se ne lintuje)
   services/            poslovna logika BEZ Qt-a: projects, tasks, dependencies, milestones,
                        gantt_math, budget, sharing, activity, backup, defaults, money, export_csv,
-                       export_xlsx, timetracking, dashboard, templates, reminders, updates
+                       export_xlsx, timetracking, dashboard, templates, template_library
+                       (8 ugrađenih šablona po fazama), registry (rizici, ljudi, dokumenta,
+                       odluke), suggestions (predlozi za padajuće liste), reminders, updates
   share/               snapshot (šta se deli), render + templates/share.html, local_server
                        (deljenje u mreži, iste adrese kao Worker), client (Worker), secrets
   ui/
@@ -42,16 +44,18 @@ app/
     reminders.py       podsetnici za rokove (sistemska traka, provera na 30 min)
     lan_share.py       pokreće/gasi lokalni server po uključenim linkovima; komentar → signal
     background.py      mrežni poslovi u QThreadPool-u (sopstvena sesija po poslu)
-    views/             dashboard_view, list_view, kanban_view, budget_view,
+    views/             dashboard_view, list_view, kanban_view, budget_view, registry_view,
                        gantt/ (chart, items, model; load_chart_data koristi i PDF)
     dialogs/           project (sa šablonom), task (6 tabova, i Vreme), milestone, cost,
-                       budget, share, settings, restore, templates
-    widgets/           card (kartica sa senkom), kpi (brojka + ikonica), fields, paint
+                       budget, share, settings, restore, templates,
+                       registry_dialogs (rizik, osoba, dokument, odluka)
+    widgets/           card (kartica sa senkom), kpi (brojka + ikonica), fields (SuggestCombo:
+                       lista predloga + proizvoljan unos), paint
                        (bedževi, trake), comments_panel, timer_widget (tajmer u statusnoj traci)
 share_worker/          Cloudflare Worker (src/index.js) + Node testovi + README za postavljanje
 installer/             etapa.spec (PyInstaller), setup.iss (Inno Setup), icon.ico, launch.py
 scripts/               seed_demo.py, screenshots.py, build.ps1
-tests/                 122 testa (servisi + UI preko pytest-qt, bez prozora)
+tests/                 134 testa (servisi + UI preko pytest-qt, bez prozora)
 ```
 
 ## Pravila koda
@@ -66,6 +70,12 @@ tests/                 122 testa (servisi + UI preko pytest-qt, bez prozora)
 - Svaka izmena šeme = nova Alembic migracija:
   `alembic revision --autogenerate -m "opis"` pa proveri fajl; test `test_migrations_match_models`
   pada ako migracija nedostaje.
+- Migracije rade sa isključenim FK (`env.py`), pa proveravaju `foreign_key_check`: batch recreate
+  tabele `projects` bi inače kaskadno obrisao zadatke.
+- `registry.create/update` primaju `kind` i objekat kao positional-only (`/`), jer rizik i
+  dokument imaju polje `kind`.
+- Tekstualna polja sa predlozima (vrsta, faza, nosilac, organizacija) su `SuggestCombo`, a predlozi
+  idu iz `suggestions.for_field` (ugrađene liste iz `labels` + već upisane vrednosti).
 - Svaka izmena zadatka/projekta upisuje red u `activity_log` (`activity.apply_changes`).
 - Promena datuma zadatka ide kroz `tasks.update`/`tasks.set_dates`, koji pozivaju
   `dependencies.propagate` (zavisni zadaci se pomeraju unapred, nikad unazad).
@@ -128,6 +138,11 @@ v1.1 (verzija 1.1.0):
   Kanban kolone, prekidač teme dole levo
 - [x] Deljenje u lokalnoj mreži (podrazumevano): server u aplikaciji, PIN sa ograničenjem
   pokušaja, komentari direktno u bazu, stranica uvek ažurna; Cloudflare ostaje kao opcija
+- [x] Opšti PM alat (migracija 0003): Registar (rizici i problemi, zainteresovane strane sa RACI,
+  dokumenta i linkovi, log odluka), statusi Blokirano i Na čekanju, projekat Otkazan, polja
+  vrsta/sponzor/vođa/odeljenje i nosilac/faza/vrsta rada, 8 šablona (onboarding partnera, novi
+  servis u TNapp, integracija, regulativa, istraživanje, analitika, kampanja, opšti), 13 kategorija
+  budžeta + nova iz dijaloga troška, 8 valuta, rizici na Pregledu i u PDF/Excel izveštaju
 
 Šta korisnik treba sam da uradi (traži njegov nalog/računar):
 - `scripts\build.ps1` na Windows-u (treba Inno Setup 6) → instaler

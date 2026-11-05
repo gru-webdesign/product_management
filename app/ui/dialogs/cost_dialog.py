@@ -22,6 +22,8 @@ from app.ui.context import AppContext
 from app.ui.dialogs.base import FormDialog
 from app.ui.widgets.fields import MoneyEdit, date_edit, from_qdate
 
+NEW_CATEGORY = "__new__"
+
 
 class MoneyEntryDialog(FormDialog):
     def __init__(
@@ -86,10 +88,15 @@ class MoneyEntryDialog(FormDialog):
 
         if kind == "cost":
             self.category = QComboBox()
+            self.category.setMaxVisibleItems(16)
             for cid, name in cats:
                 self.category.addItem(name, cid)
+            self.category.insertSeparator(self.category.count())
+            self.category.addItem("+ Nova kategorija…", NEW_CATEGORY)
             if entry:
                 self.category.setCurrentIndex(max(0, self.category.findData(entry.category_id)))
+            self._last_category = self.category.currentIndex()
+            self.category.activated.connect(self._category_picked)
             self.task = QComboBox()
             self.task.addItem("Bez zadatka", None)
             for tid, name in tasks:
@@ -98,7 +105,7 @@ class MoneyEntryDialog(FormDialog):
             if wanted:
                 self.task.setCurrentIndex(max(0, self.task.findData(wanted)))
             self.vendor = QLineEdit(entry.vendor if entry else "")
-            self.vendor.setPlaceholderText("npr. Figma, štamparija, sopstveni rad")
+            self.vendor.setPlaceholderText("npr. advokatska kancelarija, Atlassian, sopstveni rad")
             self.note = QPlainTextEdit(entry.note if entry else "")
             self.note.setFixedHeight(70)
             self.form.addRow("Kategorija", self.category)
@@ -115,6 +122,25 @@ class MoneyEntryDialog(FormDialog):
         self.amount.textChanged.connect(lambda _t: self._update_converted())
         self._currency_changed(initial=bool(entry))
         self.amount.setFocus()
+
+    def _category_picked(self, index: int) -> None:
+        if self.category.itemData(index) != NEW_CATEGORY:
+            self._last_category = index
+            return
+        from PySide6.QtWidgets import QInputDialog
+
+        from app.services import budget as budget_service
+
+        name, ok = QInputDialog.getText(self, "Nova kategorija", "Naziv kategorije:")
+        cid = None
+        if ok and name.strip():
+            cid = self.ctx.run(lambda s: budget_service.create_category(s, name).id, self)
+        if cid:
+            self.category.insertItem(self._last_category + 1, name.strip(), cid)
+            self.category.setCurrentIndex(self._last_category + 1)
+            self._last_category = self.category.currentIndex()
+        else:
+            self.category.setCurrentIndex(self._last_category)
 
     def _currency_changed(self, _i=None, initial: bool = False) -> None:
         cur = self.currency.currentData()
@@ -145,7 +171,7 @@ class MoneyEntryDialog(FormDialog):
             raise ValueError(
                 f"Unesi kurs: koliko {self.base} vredi 1 {self.currency.currentData()}."
             )
-        if self.kind == "cost" and not self.category.currentData():
+        if self.kind == "cost" and self.category.currentData() in (None, NEW_CATEGORY):
             raise ValueError("Izaberi kategoriju.")
 
     def save(self) -> bool:

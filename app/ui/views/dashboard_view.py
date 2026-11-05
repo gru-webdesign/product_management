@@ -311,8 +311,9 @@ class DashboardView(QWidget):
         self.s_projects = KpiCard("Aktivni projekti", "briefcase")
         self.s_open = KpiCard("Otvoreni zadaci", "tasks")
         self.s_late = KpiCard("Kasni", "warning", "danger")
+        self.s_risks = KpiCard("Otvoreni rizici", "risk", "warning")
         self.s_hours = KpiCard("Sati ove nedelje", "timer", "success")
-        for s in (self.s_projects, self.s_open, self.s_late, self.s_hours):
+        for s in (self.s_projects, self.s_open, self.s_late, self.s_risks, self.s_hours):
             stats.addWidget(s, 1)
         root.addLayout(stats)
 
@@ -325,16 +326,17 @@ class DashboardView(QWidget):
         projects_card = Card("Projekti", icon="folder")
         self.projects = QTreeWidget()
         self.projects.setHeaderLabels(
-            ["Projekat", "Napredak", "Budžet", "Kasni", "Sledeći milestone", "Komentari"]
+            ["Projekat", "Napredak", "Budžet", "Rizici", "Kasni", "Sledeći milestone", "Komentari"]
         )
         self.projects.setRootIsDecorated(False)
         self.projects.setUniformRowHeights(True)
         self.projects.setIconSize(QSize(10, 10))
         self.projects.setItemDelegateForColumn(1, ProgressDelegate(self.projects))
         self.projects.setItemDelegateForColumn(2, PillDelegate(self.projects))
+        self.projects.setItemDelegateForColumn(3, PillDelegate(self.projects))
         ph = self.projects.header()
         ph.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        for col, w in ((1, 130), (2, 110), (3, 56), (4, 180), (5, 82)):
+        for col, w in ((1, 120), (2, 104), (3, 96), (4, 52), (5, 190), (6, 82)):
             ph.setSectionResizeMode(col, QHeaderView.ResizeMode.Fixed)
             self.projects.setColumnWidth(col, w)
         self.projects.itemClicked.connect(self._open_project)
@@ -416,12 +418,21 @@ class DashboardView(QWidget):
             str(len(ov.projects)), f"{sum(1 for c in ov.projects if c.overdue)} sa kašnjenjem"
         )
         self.s_open.set(str(ov.open_tasks), f"{done} od {ov.total_tasks} završeno")
-        self.s_late.set(
-            str(ov.overdue_tasks),
-            "rok je prošao" if ov.overdue_tasks else "sve je na vreme",
-            t.danger if ov.overdue_tasks else None,
+        blocked = ov.blocked_tasks
+        late_note = "rok je prošao" if ov.overdue_tasks else "sve je na vreme"
+        if blocked:
+            late_note += f", {blocked} blokirano"
+        self.s_late.set(str(ov.overdue_tasks), late_note, t.danger if ov.overdue_tasks else None)
+        self.s_late.chip.set_tone("danger" if ov.overdue_tasks or blocked else "success")
+        critical = ov.critical_risks
+        self.s_risks.set(
+            str(ov.open_risks),
+            f"{critical} kritičnih" if critical else "nijedan kritičan",
+            t.danger if critical else None,
         )
-        self.s_late.chip.set_tone("danger" if ov.overdue_tasks else "success")
+        self.s_risks.chip.set_tone(
+            "danger" if critical else ("warning" if ov.open_risks else "success")
+        )
         hours = ov.hours_this_week
         self.s_hours.set(format_hours(hours) if hours else "0 h", "od ponedeljka")
 
@@ -475,10 +486,10 @@ class DashboardView(QWidget):
         self.projects.clear()
         mono = theme.mono(self.projects.font(), -0.5)
         for c in ov.projects:
-            item = QTreeWidgetItem([c.name, "", "", "", "", ""])
+            item = QTreeWidgetItem([c.name, "", "", "", "", "", ""])
             item.setIcon(0, color_dot(c.color))
             item.setData(0, ROLE_ID, c.id)
-            item.setToolTip(0, c.name + (f"\n{c.client}" if c.client else ""))
+            item.setToolTip(0, "\n".join(x for x in (c.name, c.project_type, c.client) if x))
             item.setData(1, ProgressDelegate.VALUE_ROLE, c.progress)
             if c.has_budget:
                 text, color = {
@@ -489,15 +500,22 @@ class DashboardView(QWidget):
                 text, color = "Nije postavljen", t.faint
             item.setText(2, text)
             item.setData(2, PillDelegate.COLOR_ROLE, color)
-            item.setText(3, str(c.overdue) if c.overdue else "")
-            item.setForeground(3, QColor(t.danger))
-            item.setFont(3, mono)
+            if c.open_risks:
+                label = f"{c.open_risks} otvoren" + ("" if c.open_risks % 10 == 1 else "a")
+                item.setText(3, label)
+                item.setData(
+                    3, PillDelegate.COLOR_ROLE, t.danger if c.critical_risks else t.warning
+                )
+                item.setToolTip(3, f"{c.critical_risks} kritičnih" if c.critical_risks else "")
+            item.setText(4, str(c.overdue) if c.overdue else "")
+            item.setForeground(4, QColor(t.danger))
+            item.setFont(4, mono)
             if c.next_milestone:
-                item.setText(4, f"{c.next_milestone_date.strftime('%d.%m.')}  {c.next_milestone}")
-            item.setText(5, f"{c.unread} novih" if c.unread else "")
-            item.setForeground(5, QColor(t.accent))
+                item.setText(5, f"{c.next_milestone_date.strftime('%d.%m.')}  {c.next_milestone}")
+            item.setText(6, f"{c.unread} novih" if c.unread else "")
+            item.setForeground(6, QColor(t.accent))
             self.projects.addTopLevelItem(item)
-        self.projects.setColumnHidden(5, not any(c.unread for c in ov.projects))
+        self.projects.setColumnHidden(6, not any(c.unread for c in ov.projects))
         if not ov.projects:
             empty = QTreeWidgetItem(["Nema aktivnih projekata. Napravi prvi u levoj traci."])
             empty.setFlags(Qt.ItemFlag.NoItemFlags)

@@ -12,9 +12,11 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from sqlalchemy.orm import Session
 
+from app import labels
 from app.labels import PRIORITY, PROJECT_STATUS, TASK_STATUS
 from app.services import budget as budget_service
 from app.services import projects as project_service
+from app.services import registry
 from app.services import tasks as task_service
 from app.services import timetracking as tt
 
@@ -59,9 +61,12 @@ def build(session: Session, project_id: str) -> Workbook:
             "Utrošeno (h)",
             f"Planirani trošak ({base})",
             "Tagovi",
+            "Nosilac",
+            "Faza",
+            "Vrsta rada",
             "Opis",
         ],
-        [44, 14, 12, 12, 12, 10, 12, 13, 20, 22, 50],
+        [44, 14, 12, 12, 12, 10, 12, 13, 20, 22, 20, 20, 20, 50],
         first=True,
     )
     for t, depth in task_service.tree(session, project_id):
@@ -77,6 +82,9 @@ def build(session: Session, project_id: str) -> Workbook:
                 t.actual_hours,
                 t.planned_cost_minor / 100 if t.planned_cost_minor else None,
                 ", ".join(sorted(g.name for g in t.tags)),
+                t.owner,
+                t.phase,
+                t.work_type,
                 t.description,
             ]
         )
@@ -194,6 +202,8 @@ def build(session: Session, project_id: str) -> Workbook:
         ws.cell(r, 4).number_format = money
         ws.cell(r, 5).number_format = money
 
+    _registry_sheets(wb, session, project_id)
+
     wb.properties.title = p.name
     wb.properties.subject = f"{p.client} {PROJECT_STATUS[p.status]}".strip()
     wb.properties.creator = "Etapa"
@@ -203,3 +213,130 @@ def build(session: Session, project_id: str) -> Workbook:
 def write(session: Session, project_id: str, path: Path) -> Path:
     build(session, project_id).save(path)
     return path
+
+
+def _registry_sheets(wb: Workbook, session: Session, project_id: str) -> None:
+    """Registar projekta: rizici i problemi, zainteresovane strane, dokumenta, odluke."""
+    ws = _sheet(
+        wb,
+        "Rizici i problemi",
+        [
+            "Naziv",
+            "Vrsta",
+            "Verovatnoća",
+            "Uticaj",
+            "Ocena",
+            "Nivo",
+            "Status",
+            "Nosilac",
+            "Rok",
+            "Mera",
+            "Opis",
+            "Zadatak",
+        ],
+        [40, 16, 13, 12, 8, 11, 12, 18, 12, 50, 50, 30],
+    )
+    for r in registry.risks(session, project_id):
+        ws.append(
+            [
+                r.title,
+                labels.RISK_KIND[r.kind],
+                labels.PROBABILITY[r.probability],
+                labels.IMPACT[r.impact],
+                r.score,
+                labels.risk_level(r.score),
+                labels.RISK_STATUS[r.status],
+                r.owner,
+                r.due_date,
+                r.mitigation,
+                r.description,
+                r.task.title if r.task else "",
+            ]
+        )
+        ws.cell(ws.max_row, 9).number_format = DATE_FMT
+    ws.auto_filter.ref = ws.dimensions
+
+    ws = _sheet(
+        wb,
+        "Zainteresovane strane",
+        [
+            "Ime / tim",
+            "Organizacija",
+            "Uloga",
+            "RACI",
+            "Uticaj",
+            "Interes",
+            "E-pošta",
+            "Telefon",
+            "Napomene",
+        ],
+        [28, 18, 28, 26, 10, 10, 28, 16, 40],
+    )
+    for x in registry.stakeholders(session, project_id):
+        ws.append(
+            [
+                x.name,
+                x.organization,
+                x.role,
+                labels.RACI[x.raci],
+                labels.LEVEL3[x.influence],
+                labels.LEVEL3[x.interest],
+                x.email,
+                x.phone,
+                x.notes,
+            ]
+        )
+
+    ws = _sheet(
+        wb,
+        "Dokumenta",
+        [
+            "Naziv",
+            "Vrsta",
+            "Verzija",
+            "Status",
+            "Nosilac",
+            "Datum",
+            "Lokacija",
+            "Zadatak",
+            "Napomene",
+        ],
+        [36, 28, 10, 12, 18, 12, 50, 30, 40],
+    )
+    for d in registry.documents(session, project_id):
+        ws.append(
+            [
+                d.title,
+                d.kind,
+                d.version,
+                labels.DOC_STATUS[d.status],
+                d.owner,
+                d.doc_date,
+                d.location,
+                d.task.title if d.task else "",
+                d.notes,
+            ]
+        )
+        ws.cell(ws.max_row, 6).number_format = DATE_FMT
+        if d.location.startswith(("http://", "https://")):
+            ws.cell(ws.max_row, 7).hyperlink = d.location
+
+    ws = _sheet(
+        wb,
+        "Odluke",
+        ["Datum", "Odluka", "Status", "Odobrio", "Šta je odlučeno", "Obrazloženje", "Zadatak"],
+        [12, 40, 12, 22, 50, 50, 30],
+    )
+    for d in registry.decisions(session, project_id):
+        ws.append(
+            [
+                d.decided_on,
+                d.title,
+                labels.DECISION_STATUS[d.status],
+                d.approved_by,
+                d.decision,
+                d.rationale,
+                d.task.title if d.task else "",
+            ]
+        )
+        ws.cell(ws.max_row, 1).number_format = DATE_FMT
