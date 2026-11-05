@@ -6,8 +6,10 @@ u kojem se slojevito iscrta senka. Sadržaj ide u `body` (QVBoxLayout).
 
 from __future__ import annotations
 
-from PySide6.QtCore import QRectF, Qt
-from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
+from collections import OrderedDict
+
+from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from app.ui import icons, theme
@@ -15,6 +17,10 @@ from app.ui import icons, theme
 # prostor za senku oko površine (levo, gore, desno, dole)
 SHADOW = (8, 6, 8, 12)
 RADIUS = 12
+
+
+_CACHE: OrderedDict[tuple, QPixmap] = OrderedDict()
+_CACHE_MAX = 96
 
 
 def paint_card(
@@ -25,7 +31,39 @@ def paint_card(
     border: str | None = None,
     lift: float = 1.0,
 ) -> None:
-    """Površina kartice sa senkom; koriste je i prikazi koji sami crtaju (Kanban)."""
+    """Površina kartice sa senkom; koriste je i prikazi koji sami crtaju (Kanban).
+
+    Senka je skupa za crtanje (više slojeva sa zaobljenim ivicama), pa se iscrta jednom u
+    sliku po veličini i boji i posle se samo kopira. Tako pomeranje miša i skrol ne troše CPU.
+    """
+    t = theme.tokens()
+    fill = fill or t.surface
+    border = border or t.border
+    pad_l, pad_t, pad_r, pad_b = 12, 10, 12, 16
+    w, h = int(round(rect.width())), int(round(rect.height()))
+    if w <= 0 or h <= 0:
+        return
+    dpr = p.device().devicePixelRatioF() if p.device() is not None else 1.0
+    key = (w, h, radius, fill, border, round(lift, 2), t.shadow, t.shadow_alpha, dpr)
+    pix = _CACHE.get(key)
+    if pix is None:
+        pix = QPixmap(int((w + pad_l + pad_r) * dpr), int((h + pad_t + pad_b) * dpr))
+        pix.setDevicePixelRatio(dpr)
+        pix.fill(Qt.GlobalColor.transparent)
+        q = QPainter(pix)
+        _paint_card_direct(q, QRectF(pad_l, pad_t, w, h), radius, fill, border, lift)
+        q.end()
+        _CACHE[key] = pix
+        if len(_CACHE) > _CACHE_MAX:
+            _CACHE.popitem(last=False)
+    else:
+        _CACHE.move_to_end(key)
+    p.drawPixmap(QPointF(rect.left() - pad_l, rect.top() - pad_t), pix)
+
+
+def _paint_card_direct(
+    p: QPainter, rect: QRectF, radius: float, fill: str, border: str, lift: float
+) -> None:
     t = theme.tokens()
     p.save()
     p.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -44,8 +82,8 @@ def paint_card(
         )
     path = QPainterPath()
     path.addRoundedRect(rect, radius, radius)
-    p.fillPath(path, QColor(fill or t.surface))
-    p.setPen(QPen(QColor(border or t.border), 1))
+    p.fillPath(path, QColor(fill))
+    p.setPen(QPen(QColor(border), 1))
     p.setBrush(Qt.BrushStyle.NoBrush)
     p.drawRoundedRect(rect.adjusted(0.5, 0.5, -0.5, -0.5), radius, radius)
     p.restore()

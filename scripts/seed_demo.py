@@ -591,8 +591,16 @@ def seed_extra(session: Session, today: date | None = None) -> Project:
 
 
 def main() -> int:
+    from PySide6.QtCore import QLockFile
+
+    from app.config import get_paths
     from app.main import bootstrap
 
+    lock = QLockFile(str(get_paths().ensure().lock_path))
+    if not lock.tryLock(0):
+        print("Etapa je otvorena nad ovom bazom. Zatvori je, pa ponovo pokreni seed_demo.")
+        print("(Demo projekti se prave iznova, a otvoren prozor bi pokazivao stare.)")
+        return 1
     db = bootstrap()
     with db.session() as s:
         project = seed(s)
@@ -602,6 +610,7 @@ def main() -> int:
             print(f"Demo projekat napravljen: {p.name} ({len(p.tasks)} zadataka)")
         print(f"Baza: {db.paths.db_path}")
     db.dispose()
+    lock.unlock()
     return 0
 
 

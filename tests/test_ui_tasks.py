@@ -170,3 +170,20 @@ def test_time_tab_and_status_bar_timer(window, qtbot):
 
     stop_timer(window.ctx, window)  # kraće od minuta: ne upisuje se
     assert not window.timer_widget.isVisibleTo(window)
+
+
+def test_window_recovers_after_external_reseed(window, db):
+    """seed_demo dok je Etapa otvorena: projekat dobija novi id, prozor mora da se osveži."""
+    from datetime import date
+
+    from scripts.seed_demo import seed
+
+    old = window.ctx.project_id
+    window._remember_stamp()
+    with db.session() as s:
+        seed(s, today=date.today())
+        s.commit()
+    assert window.check_external_changes()
+    assert window.ctx.project_id and window.ctx.project_id != old
+    assert len(all_items(list_view(window).tree)) == 14
+    assert not window.check_external_changes()  # bez novih izmena nema osvežavanja

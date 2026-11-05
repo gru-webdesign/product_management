@@ -1,0 +1,20 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Etapa: demo (brzo, bez debagera)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/Scripts/python.exe -m app.main",
+            "options": { "env": { "ETAPA_DATA_DIR": "${workspaceFolder}/.data" } },
+            "presentation": { "reveal": "silent" },
+            "problemMatcher": []
+        },
+        {
+            "label": "Etapa: prava baza (brzo, bez debagera)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/Scripts/python.exe -m app.main",
+            "presentation": { "reveal": "silent" },
+            "problemMatcher": []
+        }
+    ]
+}

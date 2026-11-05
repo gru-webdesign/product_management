@@ -58,6 +58,12 @@ def main() -> int:
         QMessageBox.critical(None, APP_NAME, f"Baza podataka nije mogla da se otvori:\n\n{exc}")
         return 1
 
+    from PySide6.QtCore import QLockFile
+
+    lock = QLockFile(str(db.paths.lock_path))
+    lock.setStaleLockTime(0)
+    lock.tryLock(100)  # samo oznaka da je aplikacija otvorena; ne sprečava pokretanje
+
     from app.ui import theme
     from app.ui.main_window import MainWindow, initial_theme
 
@@ -77,6 +83,7 @@ def main() -> int:
 
     background.wait_all(5000)
     db.dispose()
+    lock.unlock()
     return code
 
 

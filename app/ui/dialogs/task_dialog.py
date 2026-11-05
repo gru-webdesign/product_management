@@ -74,11 +74,13 @@ class TaskDialog(QDialog):
                 self.project_id = task.project_id
             excluded = ({task.id} | task_service.descendant_ids(task)) if task else set()
             # kandidati za „Deo zadatka“: (id, naziv, dubina, faza)
-            self._parents = [
-                (t.id, t.title, depth, t.phase)
+            candidates = [
+                (t, depth)
                 for t, depth in task_service.tree(s, self.project_id)
                 if t.id not in excluded
             ]
+            self._parents = [(t.id, t.title, depth, t.phase or "") for t, depth in candidates]
+            self._work_types = {t.id: t.work_type or "" for t, _ in candidates}
             # postojeći koraci (podzadaci): id, naziv, završen, nosilac
             self._steps = (
                 [
@@ -266,7 +268,7 @@ class TaskDialog(QDialog):
         self.parent_combo.setMaxVisibleItems(18)
         self.parent_combo.setToolTip(
             "Ako je ovaj zadatak korak većeg zadatka, izaberi taj zadatak. "
-            "Prvo su ponuđeni zadaci iz iste faze."
+            "Prvo su ponuđeni zadaci iz iste faze, pa iste vrste rada, pa ostali."
         )
         self._fill_parents(d.get("parent_id", defaults.get("parent_id")))
         self.phase.currentTextChanged.connect(self._phase_changed)
@@ -279,30 +281,52 @@ class TaskDialog(QDialog):
         return w
 
     def _fill_parents(self, wanted: str | None) -> None:
-        """Zadaci iz iste faze su na vrhu, ostali ispod; faza piše pored naziva."""
-        phase = self.phase.value().casefold()
+        """Zadaci razvrstani po temi: prvo ista faza, pa ista vrsta rada, pa svi ostali.
+
+        Pored zadataka iz drugih grupa piše njihova faza, da se odmah vidi gde pripadaju.
+        """
+        phase = self.phase.value()
+        work = self.work_type.value() if hasattr(self, "work_type") else ""
         combo = self.parent_combo
         combo.blockSignals(True)
-        combo.clear()
-        combo.addItem("Samostalan zadatak (nije deo drugog)", None)
-        same = [p for p in self._parents if phase and (p[3] or "").casefold() == phase]
-        rest = [p for p in self._parents if p not in same]
-        for group, header in ((same, f"Faza {self.phase.value()}"), (rest, "Ostale faze")):
-            if not group:
-                continue
-            if same:
-                combo.insertSeparator(combo.count())
-                combo.addItem(header, "__header__")
-                item = combo.model().item(combo.count() - 1)
-                item.setEnabled(False)
-            for pid, title, depth, ph in group:
-                label = ("    " * depth) + title
-                if ph and group is rest:
-                    label += f"   ·  {ph}"
-                combo.addItem(label, pid)
-        idx = combo.findData(wanted) if wanted else 0
-        combo.setCurrentIndex(max(0, idx))
-        combo.blockSignals(False)
+        try:
+            combo.clear()
+            combo.addItem("Samostalan zadatak (nije deo drugog)", None)
+            if not self._parents:
+                combo.addItem("U projektu još nema drugih zadataka", "__header__")
+                combo.model().item(1).setEnabled(False)
+                return
+            by_task = {pid: work_type for pid, work_type in self._work_types.items()}
+            same_phase = [x for x in self._parents if phase and x[3].casefold() == phase.casefold()]
+            same_work = [
+                x
+                for x in self._parents
+                if x not in same_phase
+                and work
+                and by_task.get(x[0], "").casefold() == work.casefold()
+            ]
+            rest = [x for x in self._parents if x not in same_phase and x not in same_work]
+            groups = [
+                (same_phase, f"Faza: {phase}", False),
+                (same_work, f"Vrsta rada: {work}", True),
+                (rest, "Ostali zadaci" if same_phase or same_work else "", True),
+            ]
+            for group, header, show_phase in groups:
+                if not group:
+                    continue
+                if header:
+                    combo.insertSeparator(combo.count())
+                    combo.addItem(header, "__header__")
+                    combo.model().item(combo.count() - 1).setEnabled(False)
+                for pid, title, depth, ph in group:
+                    label = ("    " * depth) + title
+                    if ph and show_phase:
+                        label += f"   ·  {ph}"
+                    combo.addItem(label, pid)
+        finally:
+            idx = combo.findData(wanted) if wanted else 0
+            combo.setCurrentIndex(max(0, idx))
+            combo.blockSignals(False)
 
     def _phase_changed(self, _text: str) -> None:
         self._fill_parents(self.parent_combo.currentData())
@@ -344,6 +368,7 @@ class TaskDialog(QDialog):
         row2.addWidget(self.remove_step)
         lay.addLayout(row2)
         self.work_type.currentTextChanged.connect(self._refresh_step_suggestions)
+        self.work_type.currentTextChanged.connect(self._phase_changed)
         self._render_steps()
         self._refresh_step_suggestions()
         return w

@@ -42,6 +42,8 @@ class TimerWidget(QWidget):
         self.title.setMaximumWidth(260)
         self.elapsed = QLabel()
         self.elapsed.setFont(theme.mono(self.font()))
+        # stalna širina: promena teksta svake sekunde ne pomera raspored statusne trake
+        self.elapsed.setFixedWidth(self.elapsed.fontMetrics().horizontalAdvance("000:00:00") + 4)
         self.stop_button = QPushButton("Zaustavi")
         self.stop_button.setIcon(icons.icon("stop"))
         self.stop_button.clicked.connect(lambda: stop_timer(self.ctx, self.window()))

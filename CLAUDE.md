@@ -55,7 +55,7 @@ app/
 share_worker/          Cloudflare Worker (src/index.js) + Node testovi + README za postavljanje
 installer/             etapa.spec (PyInstaller), setup.iss (Inno Setup), icon.ico, launch.py
 scripts/               seed_demo.py, screenshots.py, build.ps1
-tests/                 140 testova (servisi + UI preko pytest-qt, bez prozora)
+tests/                 141 test (servisi + UI preko pytest-qt, bez prozora)
 ```
 
 ## Pravila koda
@@ -86,6 +86,10 @@ tests/                 140 testova (servisi + UI preko pytest-qt, bez prozora)
 - Mreža (Worker) nikad u glavnoj niti za automatske poslove: `ui/background.run(db, fn, ...)`.
 - Lokalni server radi u svojoj niti sa svojom sesijom po zahtevu; UI dobija vest samo preko
   signala `LanShare.comment_received`. Server radi samo dok postoji uključen link.
+- Senka kartice (`paint_card`) se kešira kao pixmap po veličini i boji: ne crtati senke
+  direktno u paintEvent-u (skupo na Windows-u i HiDPI ekranima).
+- MainWindow pri aktivaciji proverava spoljne izmene baze (`check_external_changes`), a
+  `etapa.lock` u folderu podataka govori seed_demo-u da je aplikacija otvorena.
 - U testovima tema se primenjuje jednom po sesiji (conftest), ne u svakom testu (sporo).
 - Signal teme (`theme.manager().changed`) vezuj za metodu objekta, ne za lambda: lambda nadživi
   obrisan widget → RuntimeError.
@@ -147,7 +151,9 @@ v1.1 (verzija 1.1.0):
 - [x] Liste predloga (Podešavanja → Liste, Projekat → Liste predloga): partneri, organizacije,
   ljudi, vrste, faze; seed_demo briše stare demo projekte (sajt)
 - [x] Tab Koraci u zadatku (podzadaci sa štikliranjem, predlozi po vrsti rada iz
-  `labels.STEPS`, `tasks.add_steps`); „Deo zadatka“ nudi prvo zadatke iz iste faze
+  `labels.STEPS`, `tasks.add_steps`); „Deo zadatka“ grupisan: ista faza, ista vrsta rada, ostali
+- [x] Performanse: keš senki, oznaka kad radi pod debagerom, VS Code task bez debagera;
+  osvežavanje posle spoljne izmene baze (seed_demo dok je app otvoren)
 
 Šta korisnik treba sam da uradi (traži njegov nalog/računar):
 - `scripts\build.ps1` na Windows-u (treba Inno Setup 6) → instaler

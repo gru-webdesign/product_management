@@ -39,6 +39,11 @@ class Paths:
         return self.data_dir / DB_FILENAME
 
     @property
+    def lock_path(self) -> Path:
+        """Zaključan dok je Etapa otvorena nad ovom bazom (seed_demo ga proverava)."""
+        return self.data_dir / "etapa.lock"
+
+    @property
     def backups_dir(self) -> Path:
         return self.data_dir / "backups"
 

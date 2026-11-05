@@ -167,11 +167,30 @@ class ProjectHeader(QFrame):
         )
 
 
+def _under_debugger() -> bool:
+    import sys
+
+    return sys.gettrace() is not None or "debugpy" in sys.modules
+
+
+def _stamp(session) -> tuple:
+    from sqlalchemy import func, select
+
+    from app.db.models import Project, Task
+
+    return (
+        session.scalar(select(func.count(Project.id))),
+        session.scalar(select(func.count(Task.id))),
+        session.scalar(select(func.max(Task.updated_at))),
+    )
+
+
 class MainWindow(QMainWindow):
     def __init__(self, db: Database) -> None:
         super().__init__()
         self.db = db
         self.ctx = AppContext(db)
+        self._db_stamp = None  # (broj zadataka, poslednja izmena) za otkrivanje spoljnih izmena
         self.setWindowTitle(APP_NAME)
         self.resize(1360, 840)
         self.setMinimumSize(1024, 640)
@@ -229,9 +248,18 @@ class MainWindow(QMainWindow):
         self.timer_widget = TimerWidget(self.ctx)
         self.statusBar().addPermanentWidget(self.timer_widget)
         self.ctx.message.connect(lambda m: self.statusBar().showMessage(m, 6000))
+        if _under_debugger():
+            note = QLabel("Pokrenuto kroz debager (F5): sporije i troši više procesora")
+            note.setProperty("faint", True)
+            note.setToolTip(
+                "Za normalan rad pokreni bez debagera: Ctrl+F5 u VS Code-u, "
+                "Terminal → Run Task → Etapa: demo (brzo), ili python -m app.main"
+            )
+            self.statusBar().addPermanentWidget(note)
         self.ctx.project_changed.connect(self._project_changed)
         self.ctx.show_dashboard.connect(lambda: self.stack.setCurrentWidget(self.dashboard))
         self.ctx.data_changed.connect(self.header.reload)
+        self.ctx.data_changed.connect(self._remember_stamp)
         self.ctx.open_task_requested.connect(self.open_task)
         theme.manager().changed.connect(self._theme_changed)
 
@@ -380,6 +408,41 @@ class MainWindow(QMainWindow):
             self.tabs.setCurrentIndex(int(tab))
         except (TypeError, ValueError):
             pass
+
+    def changeEvent(self, event) -> None:  # noqa: N802
+        super().changeEvent(event)
+        if event.type() == event.Type.ActivationChange and self.isActiveWindow():
+            QTimer.singleShot(0, self.check_external_changes)
+
+    def check_external_changes(self) -> bool:
+        """Ako je baza menjana van ovog prozora (npr. seed_demo dok je Etapa otvorena), osveži.
+
+        Bez ovoga prozor drži projekat i zadatke koji više ne postoje, pa ni jedan zadatak ne
+        može da se otvori ni sačuva.
+        """
+        from sqlalchemy import select
+
+        from app.db.models import Project
+
+        shown = {
+            self.sidebar.list.item(i).data(Qt.ItemDataRole.UserRole)
+            for i in range(self.sidebar.list.count())
+        }
+        with self.ctx.session() as s:
+            ids = set(s.scalars(select(Project.id)))
+            stamp = _stamp(s)
+        stale = not shown <= ids or (self.ctx.project_id and self.ctx.project_id not in ids)
+        changed = stale or (self._db_stamp is not None and stamp != self._db_stamp)
+        self._db_stamp = stamp
+        if not changed:
+            return False
+        self.sidebar.reload()
+        self.ctx.data_changed.emit()
+        return True
+
+    def _remember_stamp(self) -> None:
+        with self.ctx.session() as s:
+            self._db_stamp = _stamp(s)
 
     def closeEvent(self, event) -> None:
         from PySide6.QtCore import QSettings

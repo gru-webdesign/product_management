@@ -126,8 +126,8 @@ def test_task_steps_tab_and_parent_grouping(window):
     # „Deo zadatka“: zadaci iz iste faze su prvi
     dlg.phase.setCurrentText("Discovery i analiza")
     labels = [dlg.parent_combo.itemText(i) for i in range(dlg.parent_combo.count())]
-    assert labels[0].startswith("Samostalan") and labels[2] == "Faza Discovery i analiza"
-    assert labels[3] == "KYB dokumentacija partnera" and "Ostale faze" in labels
+    assert labels[0].startswith("Samostalan") and labels[2] == "Faza: Discovery i analiza"
+    assert labels[3] == "KYB dokumentacija partnera" and "Ostali zadaci" in labels
     dlg.phase.setCurrentText("Razvoj i integracija")
     dlg._save()
     with window.ctx.session() as s:
