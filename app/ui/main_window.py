@@ -306,6 +306,7 @@ class MainWindow(QMainWindow):
         project_menu.addSeparator()
         self._action(project_menu, "Sačuvaj kao šablon…", None, self.save_template)
         self._action(project_menu, "Šabloni projekata…", None, self.manage_templates)
+        self._action(project_menu, "Liste predloga (partneri, ljudi, faze)…", None, self.open_lists)
         project_menu.addSeparator()
         self._action(project_menu, "Obriši projekat…", None, self.sidebar.delete_current)
 
@@ -463,6 +464,11 @@ class MainWindow(QMainWindow):
         from app.ui.dialogs.settings_dialog import SettingsDialog
 
         SettingsDialog(self.ctx, self).exec()
+
+    def open_lists(self, name: str = "client") -> None:
+        from app.ui.dialogs.settings_dialog import SettingsDialog
+
+        SettingsDialog(self.ctx, self, tab=f"lists:{name}").exec()
 
     def export_csv(self) -> None:
         from app.ui.export import export_tasks_dialog

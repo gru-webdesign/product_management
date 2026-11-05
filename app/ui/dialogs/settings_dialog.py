@@ -1,4 +1,4 @@
-"""Podešavanja: opšte (ime, valuta, satnica, upozorenje, tema) i deljenje (mreža ili Worker)."""
+"""Podešavanja: opšte (ime, valuta, satnica, upozorenje, tema), deljenje i liste predloga."""
 
 from __future__ import annotations
 
@@ -45,7 +45,11 @@ class SettingsDialog(QDialog):
         self.tabs = QTabWidget()
         self.tabs.addTab(self._general(), "Opšte")
         self.tabs.addTab(self._share(), "Deljenje")
-        self.tabs.setCurrentIndex(1 if tab == "share" else 0)
+        from app.ui.dialogs.lists_tab import ListsEditor
+
+        self.lists = ListsEditor(ctx, start=tab.removeprefix("lists:") or "client")
+        self.tabs.addTab(self.lists, "Liste")
+        self.tabs.setCurrentIndex({"share": 1}.get(tab, 2 if tab.startswith("lists") else 0))
         root.addWidget(self.tabs)
         self.error = QLabel()
         self.error.setWordWrap(True)
@@ -230,6 +234,7 @@ class SettingsDialog(QDialog):
         share_mode, port = self.share_mode.currentData(), self.lan_port.value()
 
         def work(s):
+            self.lists.save(s)
             for k, v in values.items():
                 set_setting(s, k, v)
             sharing.set_mode(s, share_mode)

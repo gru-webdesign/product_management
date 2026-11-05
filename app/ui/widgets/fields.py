@@ -177,7 +177,8 @@ class ColorPicker(QWidget):
 class SuggestCombo(QComboBox):
     """Padajuća lista sa predlozima u koju može da se upiše i sopstvena vrednost.
 
-    Predlozi = ugrađena lista + vrednosti koje su ranije upisane u bazu. Prazno je dozvoljeno.
+    Predlozi dolaze iz suggestions.for_field (lista iz Podešavanja → Liste + upisane vrednosti).
+    Prazno je dozvoljeno: polje se briše i ostaje prazno.
     """
 
     def __init__(self, suggestions: list[str], value: str = "", placeholder: str = "") -> None:
@@ -185,7 +186,6 @@ class SuggestCombo(QComboBox):
         self.setEditable(True)
         self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.setMaxVisibleItems(16)
-        self.addItem("")
         for s in suggestions:
             if s:
                 self.addItem(s)
@@ -200,6 +200,7 @@ class SuggestCombo(QComboBox):
         value = value or ""
         if value and self.findText(value) < 0:
             self.addItem(value)
+        self.setCurrentIndex(self.findText(value) if value else -1)
         self.setCurrentText(value)
 
     def value(self) -> str:

@@ -37,15 +37,16 @@ from app.services.money import to_minor  # noqa: E402
 
 DEMO_NAME = "Onboarding partnera AlfaPay (demo)"
 EXTRA_NAME = "Plaćanje računa u TNapp (demo)"
+# demo projekti iz ranijih verzija: brišu se pri novom pravljenju demoa
+LEGACY_NAMES = ("Redizajn sajta (demo)", "Redizajn sajta — demo")
 
 
 def seed(session: Session, today: date | None = None) -> Project:
     """Demo projekat: onboarding novog partnera za slanje novca (izmišljen partner AlfaPay)."""
     today = today or date.today()
-    old = session.scalar(select(Project).where(Project.name == DEMO_NAME))
-    if old is not None:
+    for old in session.scalars(select(Project).where(Project.name.in_((DEMO_NAME, *LEGACY_NAMES)))):
         session.delete(old)
-        session.flush()
+    session.flush()
 
     def d(offset: int) -> date:
         return today + timedelta(days=offset)

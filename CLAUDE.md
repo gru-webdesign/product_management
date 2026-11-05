@@ -47,7 +47,7 @@ app/
     views/             dashboard_view, list_view, kanban_view, budget_view, registry_view,
                        gantt/ (chart, items, model; load_chart_data koristi i PDF)
     dialogs/           project (sa šablonom), task (6 tabova, i Vreme), milestone, cost,
-                       budget, share, settings, restore, templates,
+                       budget, share, settings (+ lists_tab: Liste predloga), restore, templates,
                        registry_dialogs (rizik, osoba, dokument, odluka)
     widgets/           card (kartica sa senkom), kpi (brojka + ikonica), fields (SuggestCombo:
                        lista predloga + proizvoljan unos), paint
@@ -55,7 +55,7 @@ app/
 share_worker/          Cloudflare Worker (src/index.js) + Node testovi + README za postavljanje
 installer/             etapa.spec (PyInstaller), setup.iss (Inno Setup), icon.ico, launch.py
 scripts/               seed_demo.py, screenshots.py, build.ps1
-tests/                 134 testa (servisi + UI preko pytest-qt, bez prozora)
+tests/                 139 testova (servisi + UI preko pytest-qt, bez prozora)
 ```
 
 ## Pravila koda
@@ -75,7 +75,8 @@ tests/                 134 testa (servisi + UI preko pytest-qt, bez prozora)
 - `registry.create/update` primaju `kind` i objekat kao positional-only (`/`), jer rizik i
   dokument imaju polje `kind`.
 - Tekstualna polja sa predlozima (vrsta, faza, nosilac, organizacija) su `SuggestCombo`, a predlozi
-  idu iz `suggestions.for_field` (ugrađene liste iz `labels` + već upisane vrednosti).
+  idu iz `suggestions.for_field`: lista iz Podešavanja → Liste (settings `list.<polje>`, JSON
+  items + hidden) ili ugrađena iz `labels`, plus već upisane vrednosti koje nisu sakrivene.
 - Svaka izmena zadatka/projekta upisuje red u `activity_log` (`activity.apply_changes`).
 - Promena datuma zadatka ide kroz `tasks.update`/`tasks.set_dates`, koji pozivaju
   `dependencies.propagate` (zavisni zadaci se pomeraju unapred, nikad unazad).
@@ -143,6 +144,8 @@ v1.1 (verzija 1.1.0):
   vrsta/sponzor/vođa/odeljenje i nosilac/faza/vrsta rada, 8 šablona (onboarding partnera, novi
   servis u TNapp, integracija, regulativa, istraživanje, analitika, kampanja, opšti), 13 kategorija
   budžeta + nova iz dijaloga troška, 8 valuta, rizici na Pregledu i u PDF/Excel izveštaju
+- [x] Liste predloga (Podešavanja → Liste, Projekat → Liste predloga): partneri, organizacije,
+  ljudi, vrste, faze; seed_demo briše stare demo projekte (sajt)
 
 Šta korisnik treba sam da uradi (traži njegov nalog/računar):
 - `scripts\build.ps1` na Windows-u (treba Inno Setup 6) → instaler
