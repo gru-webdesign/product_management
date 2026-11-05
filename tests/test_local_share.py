@@ -46,14 +46,14 @@ def test_page_is_live_and_hides_budget(served):
     db, client, pid, token, _ = served
     r = client.get(f"/p/{token}")
     assert r.status_code == 200
-    assert "Redizajn sajta (demo)" in r.text
+    assert "Onboarding partnera AlfaPay (demo)" in r.text
     assert "Content-Security-Policy" in r.headers
     # stranica se pravi iz baze pri svakom otvaranju: izmena se vidi odmah, bez objave
     with db.session() as s:
-        t = next(t for t, _ in task_service.tree(s, pid) if t.title == "Izrada sajta")
-        task_service.update(s, t, title="Izrada sajta i CMS")
+        t = next(t for t, _ in task_service.tree(s, pid) if t.title == "Razvoj integracije")
+        task_service.update(s, t, title="Razvoj integracije i CMS")
         s.commit()
-    assert "Izrada sajta i CMS" in client.get(f"/p/{token}").text
+    assert "Razvoj integracije i CMS" in client.get(f"/p/{token}").text
     assert client.get("/p/nepostojeci-token-123").status_code == 404
 
 
@@ -87,7 +87,7 @@ def test_pin_protects_page_and_comments(served):
     assert client.post(f"/p/{token}/unlock", data={"pin": "0000"}).status_code == 403
     ok = client.post(f"/p/{token}/unlock", data={"pin": "4321"})
     assert ok.status_code == 303 and "HttpOnly" in ok.headers["set-cookie"]
-    assert "Redizajn sajta (demo)" in client.get(f"/p/{token}").text
+    assert "Onboarding partnera AlfaPay (demo)" in client.get(f"/p/{token}").text
     assert client.get(f"/api/comments/{token}").status_code == 200
 
 

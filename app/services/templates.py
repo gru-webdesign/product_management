@@ -1,11 +1,16 @@
 """Šabloni projekata: ugrađeni (u kodu) i sačuvani iz postojećih projekata (u bazi).
 
 Format šablona (JSON):
-    {"tasks": [{"title", "offset", "days", "estimate", "priority", "parent", "tags"}],
+    {"tasks": [{"title", "offset", "days", "estimate", "priority", "parent", "tags",
+                "owner", "work_type", "phase"}],
      "deps": [[pred_index, succ_index], ...],
      "milestones": [{"name", "offset"}],
-     "budget": {"Naziv kategorije": iznos_u_parama}}
+     "budget": {"Naziv kategorije": iznos_u_parama},
+     "risks": [{"kind", "title", "probability", "impact", "owner", "mitigation"}],
+     "stakeholders": [{"name", "organization", "role", "raci", "influence", "interest"}],
+     "documents": [{"title", "kind", "owner", "status"}]}
 offset = broj dana od početka projekta, days = trajanje u danima, parent = indeks roditelja.
+Ugrađeni šabloni su u template_library.py.
 """
 
 from __future__ import annotations
@@ -17,13 +22,13 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Priority, ProjectTemplate
+from app.db.models import DocStatus, Priority, ProjectTemplate, RiskKind, RiskStatus
 from app.services import budget as budget_service
 from app.services import dependencies as dep_service
 from app.services import milestones as ms_service
 from app.services import projects as project_service
+from app.services import registry
 from app.services import tasks as task_service
-from app.services.money import to_minor
 
 
 @dataclass
@@ -35,83 +40,7 @@ class TemplateInfo:
     task_count: int
 
 
-def _t(title, offset, days, estimate=None, priority="medium", parent=None, tags=()):
-    return {
-        "title": title,
-        "offset": offset,
-        "days": days,
-        "estimate": estimate,
-        "priority": priority,
-        "parent": parent,
-        "tags": list(tags),
-    }
-
-
-BUILTIN: dict[str, dict] = {
-    "sajt": {
-        "name": "Izrada sajta",
-        "description": "Od briefa do objave: dizajn, izrada, sadržaj, testiranje.",
-        "data": {
-            "tasks": [
-                _t("Brief i prikupljanje sadržaja", 0, 4, 6, "medium", tags=["klijent"]),
-                _t("Struktura i wireframe", 4, 4, 10, "high", tags=["dizajn"]),
-                _t("Vizuelni dizajn", 8, 7, 24, "high", tags=["dizajn"]),
-                _t("Početna stranica", 8, 4, 10, parent=2),
-                _t("Unutrašnje stranice", 12, 3, 10, parent=2),
-                _t("Odobrenje dizajna", 15, 2, 2, "urgent", tags=["klijent"]),
-                _t("Izrada sajta", 17, 12, 40, "high", tags=["razvoj"]),
-                _t("Tekstovi i fotografije", 17, 8, 10, tags=["klijent"]),
-                _t("Testiranje na telefonima i browserima", 29, 3, 6, tags=["razvoj"]),
-                _t("Objava i podešavanje domena", 32, 2, 4, "high", tags=["razvoj"]),
-            ],
-            "deps": [[0, 1], [1, 2], [2, 5], [5, 6], [5, 7], [6, 8], [7, 8], [8, 9]],
-            "milestones": [
-                {"name": "Dizajn odobren", "offset": 16},
-                {"name": "Sajt objavljen", "offset": 33},
-            ],
-            "budget": {
-                "Rad": to_minor(180000),
-                "Softver i licence": to_minor(12000),
-                "Ostalo": to_minor(5000),
-            },
-        },
-    },
-    "redizajn": {
-        "name": "Redizajn postojećeg sajta",
-        "description": "Analiza starog sajta, novi dizajn, prenos sadržaja i preusmerenja.",
-        "data": {
-            "tasks": [
-                _t("Analiza postojećeg sajta i statistike", 0, 3, 6, tags=["analiza"]),
-                _t("Lista stranica i preusmerenja (SEO)", 3, 2, 4, "high", tags=["seo"]),
-                _t("Novi dizajn", 5, 7, 20, "high", tags=["dizajn"]),
-                _t("Odobrenje klijenta", 12, 2, 2, "urgent", tags=["klijent"]),
-                _t("Izrada i prenos sadržaja", 14, 10, 32, "high", tags=["razvoj"]),
-                _t("Provera preusmerenja i brzine", 24, 2, 4, tags=["seo"]),
-                _t("Objava", 26, 1, 3, "high"),
-            ],
-            "deps": [[0, 1], [0, 2], [2, 3], [3, 4], [1, 5], [4, 5], [5, 6]],
-            "milestones": [{"name": "Novi sajt objavljen", "offset": 26}],
-            "budget": {"Rad": to_minor(140000), "Ostalo": to_minor(5000)},
-        },
-    },
-    "kampanja": {
-        "name": "Kampanja na društvenim mrežama",
-        "description": "Plan, sadržaj, objave i izveštaj za mesečnu kampanju.",
-        "data": {
-            "tasks": [
-                _t("Cilj, publika i budžet kampanje", 0, 2, 3, "high"),
-                _t("Plan objava", 2, 3, 4, tags=["sadržaj"]),
-                _t("Izrada vizuala i tekstova", 5, 6, 16, "high", tags=["sadržaj"]),
-                _t("Odobrenje klijenta", 11, 1, 1, "urgent", tags=["klijent"]),
-                _t("Objave i oglasi", 12, 14, 10, tags=["oglasi"]),
-                _t("Izveštaj o rezultatima", 26, 2, 3),
-            ],
-            "deps": [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]],
-            "milestones": [{"name": "Kampanja počinje", "offset": 12}],
-            "budget": {"Rad": to_minor(60000), "Ostalo": to_minor(30000)},
-        },
-    },
-}
+from app.services.template_library import BUILTIN  # noqa: E402
 
 
 def list_templates(session: Session) -> list[TemplateInfo]:
@@ -158,6 +87,9 @@ def from_project(session: Session, project_id: str) -> dict:
                 "priority": t.priority.value,
                 "parent": index.get(t.parent_id),
                 "tags": sorted(g.name for g in t.tags),
+                "owner": t.owner,
+                "work_type": t.work_type,
+                "phase": t.phase,
             }
         )
     deps = [
@@ -175,7 +107,41 @@ def from_project(session: Session, project_id: str) -> dict:
         for cid, amount in budget_service.planned(session, project_id).items()
         if amount and cid in cats
     }
-    return {"tasks": tasks, "deps": deps, "milestones": milestones, "budget": budget}
+    risks = [
+        {
+            "kind": r.kind.value,
+            "title": r.title,
+            "probability": r.probability,
+            "impact": r.impact,
+            "owner": r.owner,
+            "mitigation": r.mitigation,
+        }
+        for r in registry.risks(session, project_id)
+    ]
+    stakeholders = [
+        {
+            "name": x.name,
+            "organization": x.organization,
+            "role": x.role,
+            "raci": x.raci,
+            "influence": x.influence,
+            "interest": x.interest,
+        }
+        for x in registry.stakeholders(session, project_id)
+    ]
+    documents = [
+        {"title": d.title, "kind": d.kind, "owner": d.owner, "status": DocStatus.DRAFT.value}
+        for d in registry.documents(session, project_id)
+    ]
+    return {
+        "tasks": tasks,
+        "deps": deps,
+        "milestones": milestones,
+        "budget": budget,
+        "risks": risks,
+        "stakeholders": stakeholders,
+        "documents": documents,
+    }
 
 
 def save_from_project(
@@ -229,6 +195,9 @@ def apply(session: Session, project_id: str, data: dict, start: date) -> int:
             priority=priority,
             parent_id=created[parent].id if parent is not None and parent < len(created) else None,
             tags=spec.get("tags") or None,
+            owner=spec.get("owner") or "",
+            work_type=spec.get("work_type") or "",
+            phase=spec.get("phase") or "",
         )
         created.append(task)
     for a, b in data.get("deps", []):
@@ -243,5 +212,26 @@ def apply(session: Session, project_id: str, data: dict, start: date) -> int:
     for name, amount in data.get("budget", {}).items():
         if name in cats:
             budget_service.set_planned(session, project_id, cats[name], int(amount))
+    for kind, key in (
+        (registry.RISK, "risks"),
+        (registry.STAKEHOLDER, "stakeholders"),
+        (registry.DOCUMENT, "documents"),
+    ):
+        for spec in data.get(key, []):
+            values = {k: v for k, v in spec.items() if k in kind.fields and k != "task_id"}
+            try:
+                registry.create(session, kind, project_id, **_enums(key, values))
+            except (ValueError, KeyError):
+                pass  # ručno izmenjen šablon sa neispravnom stavkom
     session.flush()
     return len(created)
+
+
+def _enums(key: str, values: dict) -> dict:
+    if key == "risks":
+        for field, enum in (("kind", RiskKind), ("status", RiskStatus)):
+            if field in values:
+                values[field] = enum(values[field])
+    if key == "documents" and "status" in values:
+        values["status"] = DocStatus(values["status"])
+    return values

@@ -44,14 +44,29 @@ def run_migrations_online() -> None:
 
 
 def _run(connection) -> None:
+    # Batch migracije na SQLite-u prave tabele iznova (kopija → brisanje stare → preimenovanje).
+    # Sa uključenim stranim ključevima brisanje stare tabele projekata bi kaskadno obrisalo
+    # zadatke, pa se ključevi isključuju dok migracije traju. PRAGMA mora van transakcije.
+    raw = connection.connection.dbapi_connection
+    sqlite = type(raw).__module__.startswith("sqlite3")
+    if sqlite:
+        raw.execute("PRAGMA foreign_keys=OFF")
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
         render_as_batch=True,
         compare_type=True,
     )
-    with context.begin_transaction():
-        context.run_migrations()
+    try:
+        with context.begin_transaction():
+            context.run_migrations()
+            if sqlite:
+                broken = connection.exec_driver_sql("PRAGMA foreign_key_check").fetchall()
+                if broken:
+                    raise RuntimeError(f"Migracija bi narušila veze u bazi: {broken[:5]}")
+    finally:
+        if sqlite:
+            raw.execute("PRAGMA foreign_keys=ON")
 
 
 if context.is_offline_mode():

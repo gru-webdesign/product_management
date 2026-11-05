@@ -53,13 +53,45 @@ class ProjectStatus(StrEnum):
     ACTIVE = "active"
     ON_HOLD = "on_hold"
     DONE = "done"
+    CANCELLED = "cancelled"
 
 
 class TaskStatus(StrEnum):
+    # Redosled = redosled kolona u Kanbanu.
     TODO = "todo"
     IN_PROGRESS = "in_progress"
     REVIEW = "review"
+    BLOCKED = "blocked"
+    ON_HOLD = "on_hold"
     DONE = "done"
+
+
+class RiskKind(StrEnum):
+    RISK = "risk"
+    ISSUE = "issue"
+    ASSUMPTION = "assumption"
+    DEPENDENCY = "dependency"
+
+
+class RiskStatus(StrEnum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    ACCEPTED = "accepted"
+    CLOSED = "closed"
+
+
+class DocStatus(StrEnum):
+    DRAFT = "draft"
+    REVIEW = "review"
+    APPROVED = "approved"
+    OBSOLETE = "obsolete"
+
+
+class DecisionStatus(StrEnum):
+    PROPOSED = "proposed"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    SUPERSEDED = "superseded"
 
 
 class Priority(StrEnum):
@@ -96,7 +128,11 @@ class Project(IdMixin, TimestampMixin, Base):
 
     name: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text, default="")
-    client: Mapped[str] = mapped_column(String(200), default="")
+    client: Mapped[str] = mapped_column(String(200), default="")  # partner / klijent
+    project_type: Mapped[str] = mapped_column(String(80), default="")
+    sponsor: Mapped[str] = mapped_column(String(120), default="")  # sponzor / naručilac
+    department: Mapped[str] = mapped_column(String(120), default="")  # odeljenje / tim
+    manager: Mapped[str] = mapped_column(String(120), default="")  # vođa projekta
     color: Mapped[str] = mapped_column(String(9), default="#2F55D4")
     start_date: Mapped[dt.date | None] = mapped_column(Date)
     end_date: Mapped[dt.date | None] = mapped_column(Date)
@@ -123,6 +159,16 @@ class Project(IdMixin, TimestampMixin, Base):
     )
     share_links: Mapped[list[ShareLink]] = relationship(
         back_populates="project", cascade="all, delete-orphan", passive_deletes=True
+    )
+    risks: Mapped[list[Risk]] = relationship(cascade="all, delete-orphan", passive_deletes=True)
+    stakeholders: Mapped[list[Stakeholder]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True
+    )
+    documents: Mapped[list[ProjectDocument]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True
+    )
+    decisions: Mapped[list[Decision]] = relationship(
+        cascade="all, delete-orphan", passive_deletes=True
     )
 
 
@@ -160,6 +206,9 @@ class Task(IdMixin, TimestampMixin, Base):
     progress: Mapped[int] = mapped_column(Integer, default=0)
     planned_cost_minor: Mapped[int] = mapped_column(Integer, default=0)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    work_type: Mapped[str] = mapped_column(String(80), default="")  # analiza, dokumentacija...
+    phase: Mapped[str] = mapped_column(String(80), default="")  # inicijacija, planiranje...
+    owner: Mapped[str] = mapped_column(String(120), default="")  # nosilac: osoba ili tim
 
     project: Mapped[Project] = relationship(back_populates="tasks")
     parent: Mapped[Task | None] = relationship(back_populates="subtasks", remote_side="Task.id")
@@ -408,3 +457,93 @@ class ProjectTemplate(IdMixin, TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(200), unique=True)
     description: Mapped[str] = mapped_column(Text, default="")
     data: Mapped[str] = mapped_column(Text)  # JSON: zadaci, zavisnosti, milestone-i, budžet
+
+
+# --- Registar projekta: rizici, zainteresovane strane, dokumenta, odluke --------------------------
+
+
+class Risk(IdMixin, TimestampMixin, Base):
+    """Rizik, problem, pretpostavka ili spoljna zavisnost (RAID registar)."""
+
+    __tablename__ = "risks"
+
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[RiskKind] = mapped_column(_enum(RiskKind), default=RiskKind.RISK)
+    title: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str] = mapped_column(Text, default="")
+    probability: Mapped[int] = mapped_column(Integer, default=2)  # 1 niska .. 4 vrlo visoka
+    impact: Mapped[int] = mapped_column(Integer, default=2)  # 1 nizak .. 4 kritičan
+    status: Mapped[RiskStatus] = mapped_column(_enum(RiskStatus), default=RiskStatus.OPEN)
+    owner: Mapped[str] = mapped_column(String(120), default="")
+    mitigation: Mapped[str] = mapped_column(Text, default="")
+    due_date: Mapped[dt.date | None] = mapped_column(Date)
+    task_id: Mapped[str | None] = mapped_column(ForeignKey("tasks.id", ondelete="SET NULL"))
+
+    task: Mapped[Task | None] = relationship()
+
+    @property
+    def score(self) -> int:
+        return self.probability * self.impact
+
+
+class Stakeholder(IdMixin, TimestampMixin, Base):
+    """Osoba ili tim uključen u projekat, sa ulogom i RACI odgovornošću."""
+
+    __tablename__ = "stakeholders"
+
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(200))
+    organization: Mapped[str] = mapped_column(String(200), default="")  # interno, partner...
+    role: Mapped[str] = mapped_column(String(200), default="")
+    raci: Mapped[str] = mapped_column(String(4), default="I")  # R, A, C ili I
+    influence: Mapped[int] = mapped_column(Integer, default=2)  # 1 nizak .. 3 visok
+    interest: Mapped[int] = mapped_column(Integer, default=2)
+    email: Mapped[str] = mapped_column(String(200), default="")
+    phone: Mapped[str] = mapped_column(String(60), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+
+
+class ProjectDocument(IdMixin, TimestampMixin, Base):
+    """Dokument ili link: specifikacija, ugovor, zapisnik... (putanja ili URL, ne sam fajl)."""
+
+    __tablename__ = "project_documents"
+
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    title: Mapped[str] = mapped_column(String(300))
+    kind: Mapped[str] = mapped_column(String(80), default="")
+    location: Mapped[str] = mapped_column(String(1000), default="")
+    version: Mapped[str] = mapped_column(String(40), default="")
+    status: Mapped[DocStatus] = mapped_column(_enum(DocStatus), default=DocStatus.DRAFT)
+    owner: Mapped[str] = mapped_column(String(120), default="")
+    doc_date: Mapped[dt.date | None] = mapped_column(Date)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    task_id: Mapped[str | None] = mapped_column(ForeignKey("tasks.id", ondelete="SET NULL"))
+
+    task: Mapped[Task | None] = relationship()
+
+
+class Decision(IdMixin, TimestampMixin, Base):
+    """Odluka: šta je odlučeno, zašto, ko je odobrio i kada."""
+
+    __tablename__ = "decisions"
+
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    decided_on: Mapped[dt.date] = mapped_column(Date)
+    title: Mapped[str] = mapped_column(String(300))
+    decision: Mapped[str] = mapped_column(Text, default="")
+    rationale: Mapped[str] = mapped_column(Text, default="")
+    approved_by: Mapped[str] = mapped_column(String(200), default="")
+    status: Mapped[DecisionStatus] = mapped_column(
+        _enum(DecisionStatus), default=DecisionStatus.APPROVED
+    )
+    task_id: Mapped[str | None] = mapped_column(ForeignKey("tasks.id", ondelete="SET NULL"))
+
+    task: Mapped[Task | None] = relationship()

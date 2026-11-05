@@ -43,8 +43,12 @@ COLUMNS = [
     "Procena",
     "Trošak",
     "Tagovi",
+    "Nosilac",
+    "Faza",
 ]
-C_TITLE, C_STATUS, C_PRIO, C_START, C_DUE, C_PROGRESS, C_EST, C_COST, C_TAGS = range(9)
+C_TITLE, C_STATUS, C_PRIO, C_START, C_DUE, C_PROGRESS, C_EST, C_COST, C_TAGS, C_OWNER, C_PHASE = (
+    range(11)
+)
 
 
 class TaskItem(QTreeWidgetItem):
@@ -89,12 +93,15 @@ class ListView(ProjectView):
         ):
             self.due_filter.addItem(label, key)
         self.tag_filter = QComboBox()
+        self.owner_filter = QComboBox()
+        self.phase_filter = QComboBox()
         self.hide_done = QCheckBox("Sakrij završene")
         self.clear_button = QPushButton("Poništi filtere")
         self.clear_button.setProperty("flat", True)
         self.clear_button.clicked.connect(self.clear_filters)
-        for w in (self.status_filter, self.priority_filter, self.due_filter, self.tag_filter):
+        for w in self._filters():
             w.currentIndexChanged.connect(lambda _i: self.refresh())
+            w.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
             bar.addWidget(w)
         self.hide_done.toggled.connect(lambda _c: self.refresh())
         bar.addWidget(self.hide_done)
@@ -132,9 +139,14 @@ class ListView(ProjectView):
             (C_EST, 80),
             (C_COST, 120),
             (C_TAGS, 150),
+            (C_OWNER, 140),
+            (C_PHASE, 130),
         ):
             header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
             self.tree.setColumnWidth(col, width)
+        # Nosilac i Faza stoje odmah posle statusa.
+        header.moveSection(header.visualIndex(C_OWNER), 2)
+        header.moveSection(header.visualIndex(C_PHASE), 3)
         header.setSectionsClickable(True)
         header.sectionClicked.connect(self._sort_clicked)
         self._sort_col: int | None = None
@@ -169,10 +181,22 @@ class ListView(ProjectView):
             due=self.due_filter.currentData() or "",
             tag=self.tag_filter.currentData() or "",
             hide_done=self.hide_done.isChecked(),
+            owner=self.owner_filter.currentData() or "",
+            phase=self.phase_filter.currentData() or "",
+        )
+
+    def _filters(self) -> tuple[QComboBox, ...]:
+        return (
+            self.status_filter,
+            self.priority_filter,
+            self.due_filter,
+            self.owner_filter,
+            self.phase_filter,
+            self.tag_filter,
         )
 
     def clear_filters(self) -> None:
-        for w in (self.status_filter, self.priority_filter, self.due_filter, self.tag_filter):
+        for w in self._filters():
             w.blockSignals(True)
             w.setCurrentIndex(0)
             w.blockSignals(False)
@@ -182,15 +206,19 @@ class ListView(ProjectView):
         self.refresh()
 
     def _reload_tags(self, tags: list[str]) -> None:
-        current = self.tag_filter.currentData()
-        self.tag_filter.blockSignals(True)
-        self.tag_filter.clear()
-        self.tag_filter.addItem("Svi tagovi", "")
-        for t in tags:
-            self.tag_filter.addItem(f"#{t}", t)
-        idx = self.tag_filter.findData(current) if current else 0
-        self.tag_filter.setCurrentIndex(max(0, idx))
-        self.tag_filter.blockSignals(False)
+        self._fill(self.tag_filter, "Svi tagovi", [(f"#{t}", t) for t in tags])
+
+    @staticmethod
+    def _fill(combo: QComboBox, first: str, items: list[tuple[str, str]]) -> None:
+        current = combo.currentData()
+        combo.blockSignals(True)
+        combo.clear()
+        combo.addItem(first, "")
+        for label, value in items:
+            combo.addItem(label, value)
+        idx = combo.findData(current) if current else 0
+        combo.setCurrentIndex(max(0, idx))
+        combo.blockSignals(False)
 
     # --- punjenje --------------------------------------------------------------------------------
 
@@ -211,6 +239,12 @@ class ListView(ProjectView):
                 for task, depth in (visible if flat else rows)
             ]
             total = len(rows)
+            owners = sorted({task.owner for task, _ in rows if task.owner}, key=str.casefold)
+            phases = sorted({task.phase for task, _ in rows if task.phase}, key=str.casefold)
+        self._fill(self.owner_filter, "Svi nosioci", [(o, o) for o in owners])
+        self._fill(self.phase_filter, "Sve faze", [(ph, ph) for ph in phases])
+        self.owner_filter.setVisible(bool(owners))
+        self.phase_filter.setVisible(bool(phases))
 
         self.tree.setUpdatesEnabled(False)
         self.tree.clear()
@@ -254,6 +288,12 @@ class ListView(ProjectView):
             item.setTextAlignment(
                 C_EST, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
             )
+            item.setText(C_OWNER, row["owner"])
+            item.setData(C_OWNER, ROLE_SORT, row["owner"].casefold() or "\uffff")
+            item.setText(C_PHASE, row["phase"])
+            item.setData(C_PHASE, ROLE_SORT, row["phase"].casefold() or "\uffff")
+            if row["work_type"]:
+                item.setToolTip(C_TITLE, f"{row['title']}\nVrsta rada: {row['work_type']}")
             if row["cost"]:
                 item.setText(C_COST, format_money(row["cost"]))
             item.setData(C_COST, ROLE_SORT, row["cost"])
@@ -303,6 +343,9 @@ class ListView(ProjectView):
             "estimate": task.estimate_hours,
             "cost": task.planned_cost_minor,
             "tags": sorted(tg.name for tg in task.tags),
+            "owner": task.owner,
+            "phase": task.phase,
+            "work_type": task.work_type,
         }
 
     def _expanded_ids(self) -> set[str]:

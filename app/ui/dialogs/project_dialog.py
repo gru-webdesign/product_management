@@ -8,11 +8,12 @@ from typing import Any
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QComboBox, QLineEdit, QPlainTextEdit
 
+from app import labels
 from app.db.models import Project, ProjectStatus
 from app.labels import PROJECT_COLORS, PROJECT_STATUS
 from app.services.templates import TemplateInfo
 from app.ui.dialogs.base import FormDialog
-from app.ui.widgets.fields import ColorPicker, OptionalDateField
+from app.ui.widgets.fields import ColorPicker, OptionalDateField, SuggestCombo
 
 
 class ProjectDialog(FormDialog):
@@ -21,6 +22,7 @@ class ProjectDialog(FormDialog):
         project: Project | None = None,
         parent=None,
         templates: list[TemplateInfo] | None = None,
+        suggest: dict[str, list[str]] | None = None,
     ) -> None:
         super().__init__("Izmena projekta" if project else "Novi projekat", parent)
         self.template = None
@@ -34,10 +36,20 @@ class ProjectDialog(FormDialog):
                     self.template.count() - 1, info.description, Qt.ItemDataRole.ToolTipRole
                 )
 
+        suggest = suggest or {}
+        people = suggest.get("people", labels.TEAMS)
         self.name = QLineEdit(project.name if project else "")
-        self.name.setPlaceholderText("npr. Redizajn sajta za piceriju")
-        self.client = QLineEdit(project.client if project else "")
-        self.client.setPlaceholderText("opciono")
+        self.name.setPlaceholderText("npr. Onboarding partnera XY ili Plaćanje računa u TNapp")
+        self.project_type = SuggestCombo(
+            suggest.get("project_type", labels.PROJECT_TYPES),
+            project.project_type if project else "",
+        )
+        self.client = SuggestCombo(
+            suggest.get("client", []), project.client if project else "", "opciono"
+        )
+        self.sponsor = SuggestCombo(people, project.sponsor if project else "", "opciono")
+        self.manager = SuggestCombo(people, project.manager if project else "", "opciono")
+        self.department = SuggestCombo(people, project.department if project else "", "opciono")
         self.color = ColorPicker(PROJECT_COLORS, project.color if project else None)
         self.status = QComboBox()
         for status, label in PROJECT_STATUS.items():
@@ -48,19 +60,23 @@ class ProjectDialog(FormDialog):
         self.start = OptionalDateField(project.start_date if project else None, "Postavi")
         self.end = OptionalDateField(project.end_date if project else None, "Postavi")
         self.description = QPlainTextEdit(project.description if project else "")
-        self.description.setPlaceholderText("Cilj projekta, napomene…")
+        self.description.setPlaceholderText("Cilj projekta, obim, kriterijumi uspeha, napomene…")
         self.description.setFixedHeight(90)
 
         if self.template is not None:
             self.form.addRow("Šablon", self.template)
             self.template.currentIndexChanged.connect(self._template_changed)
         self.form.addRow("Naziv", self.name)
-        self.form.addRow("Klijent", self.client)
+        self.form.addRow("Vrsta projekta", self.project_type)
+        self.form.addRow("Partner / klijent", self.client)
+        self.form.addRow("Sponzor / naručilac", self.sponsor)
+        self.form.addRow("Vođa projekta", self.manager)
+        self.form.addRow("Odeljenje / tim", self.department)
         self.form.addRow("Boja", self.color)
         self.form.addRow("Status", self.status)
         self.form.addRow("Početak", self.start)
         self.form.addRow("Kraj", self.end)
-        self.form.addRow("Opis", self.description)
+        self.form.addRow("Cilj i opis", self.description)
         self.name.setFocus()
 
     def _template_changed(self) -> None:
@@ -81,7 +97,11 @@ class ProjectDialog(FormDialog):
     def values(self) -> dict[str, Any]:
         return {
             "name": self.name.text().strip(),
-            "client": self.client.text().strip(),
+            "client": self.client.value(),
+            "project_type": self.project_type.value(),
+            "sponsor": self.sponsor.value(),
+            "manager": self.manager.value(),
+            "department": self.department.value(),
             "color": self.color.value(),
             "status": self.status.currentData(),
             "start_date": self.start.value(),

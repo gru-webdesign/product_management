@@ -17,12 +17,25 @@ DEFAULT_SETTINGS: dict[str, str] = {
 }
 
 DEFAULT_CATEGORIES: list[tuple[str, str]] = [
-    ("Rad", "#2F55D4"),
-    ("Materijal", "#0E7C86"),
+    ("Interni rad", "#2F55D4"),
+    ("Spoljni saradnici i konsultanti", "#0E7C86"),
+    ("Razvoj kod dobavljača", "#22844C"),
     ("Softver i licence", "#7A5AC0"),
-    ("Putni troškovi", "#B8620A"),
+    ("Infrastruktura i hosting", "#5E5E68"),
+    ("Pravne usluge", "#8A7A12"),
+    ("Revizija i sertifikacija", "#BE3455"),
+    ("Bezbednost i testiranje", "#C2410C"),
+    ("Marketing", "#B8620A"),
+    ("Obuke", "#4F7CC2"),
+    ("Materijal i oprema", "#6B8E4E"),
+    ("Putni troškovi", "#A0522D"),
     ("Ostalo", "#7C7C86"),
 ]
+
+# Kategorije iz prve verzije: baza koja ima tačno njih dobija novi spisak (preimenovanje
+# zadržava sve troškove i planove vezane za kategoriju).
+OLD_CATEGORIES = ["Rad", "Materijal", "Softver i licence", "Putni troškovi", "Ostalo"]
+OLD_RENAMES = {"Rad": "Interni rad", "Materijal": "Materijal i oprema"}
 
 
 def ensure_defaults(session: Session) -> None:
@@ -32,10 +45,25 @@ def ensure_defaults(session: Session) -> None:
         if key not in existing:
             session.add(Setting(key=key, value=value))
 
-    if session.scalar(select(BudgetCategory.id).limit(1)) is None:
+    categories = list(session.scalars(select(BudgetCategory)))
+    if not categories:
         for order, (name, color) in enumerate(DEFAULT_CATEGORIES):
             session.add(BudgetCategory(name=name, color=color, sort_order=order))
+    elif sorted(c.name for c in categories) == sorted(OLD_CATEGORIES):
+        _upgrade_old_categories(session, categories)
     session.flush()
+
+
+def _upgrade_old_categories(session: Session, categories: list[BudgetCategory]) -> None:
+    by_name = {c.name: c for c in categories}
+    for old, new in OLD_RENAMES.items():
+        by_name[old].name = new
+    by_name = {c.name: c for c in categories}
+    for order, (name, color) in enumerate(DEFAULT_CATEGORIES):
+        if name in by_name:
+            by_name[name].sort_order = order
+        else:
+            session.add(BudgetCategory(name=name, color=color, sort_order=order))
 
 
 def get_setting(session: Session, key: str) -> str:

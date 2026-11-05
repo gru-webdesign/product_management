@@ -49,6 +49,7 @@ def test_tabs_and_dark_theme(qtbot, db):
         "Kanban",
         "Gant",
         "Budžet",
+        "Registar",
     ]
     theme.apply(QApplication.instance(), "dark")
     assert theme.tokens().name == "dark"
@@ -85,17 +86,17 @@ def test_new_project_from_template_and_save_as_template(qtbot, db, monkeypatch):
     from app.ui.dialogs.project_dialog import ProjectDialog
 
     def fake_exec(dlg):
-        dlg.name.setText("Sajt za pekaru")
-        dlg.template.setCurrentIndex(dlg.template.findData("builtin:sajt"))
+        dlg.name.setText("Onboarding partnera Beta")
+        dlg.template.setCurrentIndex(dlg.template.findData("builtin:onboarding"))
         assert dlg.start.value() is not None  # šablon sam postavlja početak
         return 1
 
     monkeypatch.setattr(ProjectDialog, "exec", fake_exec)
     window = make_window(qtbot, db)
     window.sidebar.new_project()
-    assert window.header.title.text() == "Sajt za pekaru"
+    assert window.header.title.text() == "Onboarding partnera Beta"
     with db.session() as s:
-        assert len(task_service.tree(s, window.ctx.project_id)) == 10
+        assert len(task_service.tree(s, window.ctx.project_id)) == 38
 
     monkeypatch.setattr(QInputDialog, "getText", lambda *a, **k: ("Pekara šablon", True))
     window.save_template()

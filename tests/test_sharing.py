@@ -74,7 +74,7 @@ def test_snapshot_contains_only_shared_data(session, project):
     assert "budget" not in data
     dumped = json.dumps(data, ensure_ascii=False)
     assert "Klijent želi toplije boje" not in dumped  # beleške se ne dele
-    assert "Foto banka" not in dumped  # dobavljači se ne dele
+    assert "Advokatska kancelarija" not in dumped  # dobavljači se ne dele
     with_budget = snapshot.build(session, project.id, ShareOptions(show_budget=True))
     assert with_budget["budget"]["planned"] == "222.000,00 RSD"
     assert len(with_budget["budget"]["lines"]) == 4
@@ -87,7 +87,7 @@ def test_render_escapes_script_breakout(session, project):
     m = re.search(r'<script id="data" type="application/json">(.*?)</script>', html, re.S)
     data = json.loads(m.group(1))
     assert any(t["title"].startswith("</script>") for t in data["tasks"])
-    assert "<title>Redizajn sajta (demo) · pregled projekta</title>" in html
+    assert "<title>Onboarding partnera AlfaPay (demo) · pregled projekta</title>" in html
 
 
 def test_publish_update_pin_and_revoke(session, project, client, worker):
@@ -116,7 +116,11 @@ def test_publish_update_pin_and_revoke(session, project, client, worker):
 
 def test_sync_comments(session, project, client, worker):
     link = sharing.publish(session, client, project.id)
-    design = next(t for t, _ in tasks_svc.tree(session, project.id) if t.title == "Vizuelni dizajn")
+    design = next(
+        t
+        for t, _ in tasks_svc.tree(session, project.id)
+        if t.title == "AML procena rizika partnera"
+    )
     worker.comments[link.token] = [
         {
             "id": "2026-11-02T10:00:00.000Z-aa",

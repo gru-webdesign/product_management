@@ -53,13 +53,7 @@ def greeting(now: datetime | None = None) -> str:
 
 
 def status_colors() -> dict[TaskStatus, str]:
-    t = theme.tokens()
-    return {
-        TaskStatus.TODO: t.faint,
-        TaskStatus.IN_PROGRESS: t.accent,
-        TaskStatus.REVIEW: t.warning,
-        TaskStatus.DONE: t.success,
-    }
+    return theme.status_colors()
 
 
 class ProgressRing(QWidget):
@@ -91,7 +85,13 @@ class ProgressRing(QWidget):
             start = 90 * 16
             gap = 2 * 16 if sum(1 for n in self.counts.values() if n) > 1 else 0
             colors = status_colors()
-            for status in (TaskStatus.DONE, TaskStatus.REVIEW, TaskStatus.IN_PROGRESS):
+            for status in (
+                TaskStatus.DONE,
+                TaskStatus.REVIEW,
+                TaskStatus.IN_PROGRESS,
+                TaskStatus.BLOCKED,
+                TaskStatus.ON_HOLD,
+            ):
                 n = self.counts.get(status, 0)
                 if not n:
                     continue
@@ -352,7 +352,14 @@ class DashboardView(QWidget):
         legend.setSpacing(8)
         legend.addStretch(1)
         self.legend: dict[TaskStatus, LegendRow] = {}
-        for status in (TaskStatus.DONE, TaskStatus.IN_PROGRESS, TaskStatus.REVIEW, TaskStatus.TODO):
+        for status in (
+            TaskStatus.DONE,
+            TaskStatus.IN_PROGRESS,
+            TaskStatus.REVIEW,
+            TaskStatus.BLOCKED,
+            TaskStatus.ON_HOLD,
+            TaskStatus.TODO,
+        ):
             row = LegendRow()
             self.legend[status] = row
             legend.addWidget(row)

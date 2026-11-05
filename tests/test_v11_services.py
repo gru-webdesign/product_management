@@ -27,7 +27,7 @@ def test_dashboard_overview(session):
     assert [c.name for c in ov.projects] == [p.name]
     card = ov.projects[0]
     assert card.total == 8 and card.done == 2 and card.has_budget
-    assert card.next_milestone == "Dizajn odobren"
+    assert card.next_milestone == "Compliance odobrio"
     assert ov.open_tasks == 6 and ov.overdue_tasks == 0
     assert all(d.due <= D + timedelta(days=14) for d in ov.deadlines)
     assert ov.deadlines == sorted(ov.deadlines, key=lambda d: d.due)
@@ -36,16 +36,29 @@ def test_dashboard_overview(session):
 
 
 def test_builtin_template_applies_with_dates_deps_and_budget(session):
-    p = projects_svc.create(session, name="Novi sajt", start_date=D)
-    n = templates.apply(session, p.id, templates.get_data(session, "builtin:sajt"), D)
-    assert n == 10
+    from app.services import registry
+
+    p = projects_svc.create(session, name="Onboarding partnera X", start_date=D)
+    n = templates.apply(session, p.id, templates.get_data(session, "builtin:onboarding"), D)
+    assert n == 38
     tree = tasks_svc.tree(session, p.id)
-    first = tree[0][0]
-    assert first.start_date == D and first.due_date == D + timedelta(days=3)
-    assert any(depth == 1 for _, depth in tree)
-    assert len(dep_service.for_project(session, p.id)) == 8
-    assert len(ms_service.for_project(session, p.id)) == 2
-    assert budget_service.summary(session, p.id).planned == 19700000
+    first = tree[0][0]  # faza je nadređeni zadatak koji obuhvata svoje korake
+    assert first.title == "1. Inicijacija" and first.phase == "Inicijacija"
+    assert first.start_date == D and first.due_date == D + timedelta(days=7)
+    child = tree[1][0]
+    assert tree[1][1] == 1 and child.owner == "Product" and child.work_type == "Sastanak"
+    assert len(dep_service.for_project(session, p.id)) == 30
+    assert len(ms_service.for_project(session, p.id)) == 4
+    assert budget_service.summary(session, p.id).planned == 126000000
+    summary = registry.summary(session, p.id)
+    assert (summary.open_risks, summary.stakeholders, summary.documents) == (6, 9, 9)
+
+
+def test_all_builtin_templates_apply(session):
+    for info in templates.list_templates(session):
+        p = projects_svc.create(session, name=info.name, start_date=D)
+        n = templates.apply(session, p.id, templates.get_data(session, info.id), D)
+        assert n == info.task_count > 0
 
 
 def test_save_project_as_template_and_reuse(session):
@@ -53,7 +66,7 @@ def test_save_project_as_template_and_reuse(session):
     t = templates.save_from_project(session, src.id, "Moj šablon", "za picerije")
     infos = templates.list_templates(session)
     assert any(i.id == t.id and i.task_count == 10 and not i.builtin for i in infos)
-    assert sum(1 for i in infos if i.builtin) == 3
+    assert sum(1 for i in infos if i.builtin) == 8
     dst = projects_svc.create(session, name="Kopija")
     start = D + timedelta(days=30)
     templates.apply(session, dst.id, templates.get_data(session, t.id), start)
@@ -62,15 +75,15 @@ def test_save_project_as_template_and_reuse(session):
     assert [x.title for x, _ in dst_tree] == src_titles
     assert all(x.status == TaskStatus.TODO for x, _ in dst_tree)  # stanje se ne kopira
     # datumi su pomereni za razliku početaka
-    s0 = next(x for x, _ in tasks_svc.tree(session, src.id) if x.title == "Izrada sajta")
-    d0 = next(x for x, _ in dst_tree if x.title == "Izrada sajta")
+    s0 = next(x for x, _ in tasks_svc.tree(session, src.id) if x.title == "Razvoj integracije")
+    d0 = next(x for x, _ in dst_tree if x.title == "Razvoj integracije")
     assert (d0.start_date - s0.start_date).days == (start - src.start_date).days
     # isti naziv prepisuje, ugrađeni ne može da se obriše ni da se duplira
     assert templates.save_from_project(session, src.id, "Moj šablon").id == t.id
     with pytest.raises(ValueError):
-        templates.save_from_project(session, src.id, "Izrada sajta")
+        templates.save_from_project(session, src.id, "Onboarding partnera")
     with pytest.raises(ValueError):
-        templates.delete(session, "builtin:sajt")
+        templates.delete(session, "builtin:onboarding")
     templates.delete(session, t.id)
     assert sum(1 for i in templates.list_templates(session) if not i.builtin) == 0
 
@@ -132,7 +145,7 @@ def test_pdf_report(qtbot, session, tmp_path):
     image = gantt_image(session, p.id)
     assert image is not None and image.width() > 600
     html = build_html(session, p.id, True)
-    assert "Vizuelni dizajn" in html and "Budžet po kategorijama" in html
+    assert "AML procena rizika partnera" in html and "Budžet po kategorijama" in html
     assert "—" not in html and "–" not in html
     path = write_pdf(session, p.id, tmp_path / "r.pdf")
     data = path.read_bytes()

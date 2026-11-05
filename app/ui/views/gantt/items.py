@@ -73,8 +73,8 @@ class TaskBarItem(QGraphicsObject):
             base = QColor(t.success)
         elif self.row.overdue:
             base = QColor(t.danger)
-        elif self.row.status == TaskStatus.REVIEW:
-            base = QColor(t.warning)
+        elif self.row.status in (TaskStatus.REVIEW, TaskStatus.BLOCKED, TaskStatus.ON_HOLD):
+            base = QColor(theme.status_colors(t)[self.row.status])
         else:
             base = QColor(t.accent)
         soft = QColor(base)

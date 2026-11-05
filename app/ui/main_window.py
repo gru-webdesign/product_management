@@ -138,8 +138,22 @@ class ProjectHeader(QFrame):
                 return
             done, total, pct = project_service.progress(s, pid)
             self.title.setText(p.name)
-            self.client.setText(p.client)
-            self.client.setVisible(bool(p.client))
+            who = ", ".join(x for x in (p.project_type, p.client) if x)
+            self.client.setText(who)
+            self.client.setVisible(bool(who))
+            self.client.setToolTip(
+                "\n".join(
+                    f"{label}: {value}"
+                    for label, value in (
+                        ("Vrsta", p.project_type),
+                        ("Partner / klijent", p.client),
+                        ("Sponzor", p.sponsor),
+                        ("Vođa projekta", p.manager),
+                        ("Odeljenje", p.department),
+                    )
+                    if value
+                )
+            )
             self.status.setText("Arhiviran" if p.archived else PROJECT_STATUS[p.status])
             has_dates = bool(p.start_date or p.end_date)
             self.dates.setText(f"{_fmt(p.start_date)} - {_fmt(p.end_date)}" if has_dates else "")
@@ -254,6 +268,7 @@ class MainWindow(QMainWindow):
         from app.ui.views.gantt.gantt_view import GanttView
         from app.ui.views.kanban_view import KanbanView
         from app.ui.views.list_view import ListView
+        from app.ui.views.registry_view import RegistryView
 
         views: list[ProjectView] = []
         for cls, title, icon_name in (
@@ -261,6 +276,7 @@ class MainWindow(QMainWindow):
             (KanbanView, "Kanban", "kanban"),
             (GanttView, "Gant", "gantt"),
             (BudgetView, "Budžet", "wallet"),
+            (RegistryView, "Registar", "registry"),
         ):
             view = cls(self.ctx)
             view.title, view.icon_name = title, icon_name

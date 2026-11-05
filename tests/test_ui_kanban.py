@@ -33,12 +33,15 @@ def counts(view):
 def test_columns_filled(kanban):
     _, view = kanban
     assert counts(view) == {
-        TaskStatus.TODO: 6,
+        TaskStatus.TODO: 5,
         TaskStatus.IN_PROGRESS: 2,
         TaskStatus.REVIEW: 0,
+        TaskStatus.BLOCKED: 1,
+        TaskStatus.ON_HOLD: 0,
         TaskStatus.DONE: 2,
     }
-    assert view.columns[TaskStatus.TODO].count.text() == "6"
+    assert view.columns[TaskStatus.TODO].count.text() == "5"
+    assert len(view.columns) == 6  # i Blokirano i Na čekanju
 
 
 def test_hide_subtasks(kanban):
@@ -69,6 +72,6 @@ def test_quick_add(kanban):
 
 def test_search_filters_cards(kanban):
     w, view = kanban
-    w.ctx.set_search("objava")
+    w.ctx.set_search("go-live")
     assert sum(counts(view).values()) == 1
     w.ctx.set_search("")

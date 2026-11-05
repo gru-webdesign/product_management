@@ -51,5 +51,5 @@ def test_seed_demo_and_reseed(session):
     assert session.scalar(select(func.count(Project.id)).where(Project.name == DEMO_NAME)) == 1
     assert session.scalar(select(func.count(Task.id))) == 10
     assert session.scalar(select(func.count(TaskDependency.id))) == 8
-    figma = session.scalar(select(CostEntry).where(CostEntry.vendor == "Figma"))
+    figma = session.scalar(select(CostEntry).where(CostEntry.vendor == "Atlassian"))
     assert figma.amount_base_minor == to_minor("10430.80")

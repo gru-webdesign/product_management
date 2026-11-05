@@ -167,6 +167,22 @@ def tokens() -> Tokens:
     return manager().tokens
 
 
+def status_colors(t: Tokens | None = None) -> dict:
+    """Boja svakog statusa zadatka u trenutnoj temi (Kanban, Pregled, Gant)."""
+    from app.db.models import TaskStatus
+
+    t = t or tokens()
+    on_hold = "#9B7FE0" if t.name == "dark" else "#7A5AC0"
+    return {
+        TaskStatus.TODO: t.faint,
+        TaskStatus.IN_PROGRESS: t.accent,
+        TaskStatus.REVIEW: t.warning,
+        TaskStatus.BLOCKED: t.danger,
+        TaskStatus.ON_HOLD: on_hold,
+        TaskStatus.DONE: t.success,
+    }
+
+
 def load_fonts(app: QApplication) -> None:
     for file in sorted(FONTS_DIR.glob("*.ttf")):
         QFontDatabase.addApplicationFont(str(file))

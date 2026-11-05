@@ -123,7 +123,7 @@ def test_task_dialog_shows_task_comments(setup, qtbot):
     with w.db.session() as s:
         link = sharing.publish(s, sharing.make_client(s), w.ctx.project_id)
         task = next(
-            t for t, _ in task_service.tree(s, w.ctx.project_id) if t.title == "Izrada sajta"
+            t for t, _ in task_service.tree(s, w.ctx.project_id) if t.title == "Razvoj integracije"
         )
         worker.comments[link.token] = [
             {
@@ -193,9 +193,9 @@ def test_csv_export(setup, tmp_path):
         costs = export_csv.costs_csv(s, w.ctx.project_id)
     rows = list(csv.reader(io.StringIO(text), delimiter=";"))
     assert rows[0][1] == "Naziv" and len(rows) == 11
-    assert any(r[1].strip() == "Početna stranica" and r[0] == "1" for r in rows)
+    assert any(r[1].strip() == "Provera stvarnih vlasnika" and r[0] == "1" for r in rows)
     cost_rows = list(csv.reader(io.StringIO(costs), delimiter=";"))
-    figma = next(r for r in cost_rows if r[4] == "Figma")
+    figma = next(r for r in cost_rows if r[4] == "Atlassian")
     assert figma[5] == "89,00" and figma[6] == "EUR" and figma[8] == "10430,80"
     target = tmp_path / "x.csv"
     export_csv.write(target, text)
@@ -222,7 +222,7 @@ def test_export_dialogs(setup, tmp_path, monkeypatch):
     xlsx = export.export_xlsx_dialog(w.ctx, w)
     assert xlsx.exists() and xlsx.stat().st_size > 0
     csv_path = export.export_tasks_dialog(w.ctx, w)
-    assert "Figma" in csv_path.read_text(encoding="utf-8-sig")
+    assert "Atlassian" in csv_path.read_text(encoding="utf-8-sig")
     assert export.export_pdf_dialog(w.ctx, w) is None  # otkazano
 
 

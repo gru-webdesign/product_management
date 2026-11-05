@@ -71,7 +71,7 @@ def main() -> int:
         design = next(
             t
             for t, _ in task_service.tree(s, window.ctx.project_id)
-            if t.title == "Vizuelni dizajn"
+            if t.title == "AML procena rizika partnera"
         )
         design_id = design.id
     for tab, label in ((0, "detalji"), (2, "zavisnosti"), (3, "vreme")):

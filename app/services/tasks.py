@@ -25,6 +25,9 @@ EDITABLE = {
     "planned_cost_minor",
     "sort_order",
     "parent_id",
+    "work_type",
+    "phase",
+    "owner",
 }
 
 
@@ -36,10 +39,19 @@ class TaskFilter:
     due: str = ""  # "" | "overdue" | "week" | "none"
     tag: str = ""
     hide_done: bool = False
+    owner: str = ""
+    phase: str = ""
 
     def active(self) -> bool:
         return bool(
-            self.search or self.status or self.priority or self.due or self.tag or self.hide_done
+            self.search
+            or self.status
+            or self.priority
+            or self.due
+            or self.tag
+            or self.hide_done
+            or self.owner
+            or self.phase
         )
 
 
@@ -51,6 +63,9 @@ def is_overdue(task: Task, today: date | None = None) -> bool:
 def _normalize(changes: dict[str, Any]) -> dict[str, Any]:
     if "title" in changes:
         changes["title"] = str(changes["title"]).strip()
+    for key in ("work_type", "phase", "owner"):
+        if key in changes:
+            changes[key] = " ".join(str(changes[key] or "").split())
     if "progress" in changes and changes["progress"] is not None:
         changes["progress"] = max(0, min(100, int(changes["progress"])))
     if changes.get("status") == TaskStatus.DONE and "progress" not in changes:
@@ -263,6 +278,10 @@ def matches(task: Task, f: TaskFilter, today: date | None = None) -> bool:
         return False
     if f.tag and f.tag not in {t.name for t in task.tags}:
         return False
+    if f.owner and task.owner != f.owner:
+        return False
+    if f.phase and task.phase != f.phase:
+        return False
     if f.due == "overdue" and not is_overdue(task, today):
         return False
     if f.due == "week":
@@ -272,7 +291,8 @@ def matches(task: Task, f: TaskFilter, today: date | None = None) -> bool:
         return False
     if f.search:
         needle = f.search.lower()
-        hay = f"{task.title}\n{task.description}\n{' '.join(t.name for t in task.tags)}".lower()
+        tags = " ".join(t.name for t in task.tags)
+        hay = f"{task.title}\n{task.description}\n{tags}\n{task.owner}\n{task.work_type}".lower()
         if needle not in hay:
             return False
     return True

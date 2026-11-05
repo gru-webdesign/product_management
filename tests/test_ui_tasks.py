@@ -43,7 +43,9 @@ def test_tree_shows_all_tasks_with_subtasks(window):
     view = list_view(window)
     assert view.tree.topLevelItemCount() == 8
     assert len(all_items(view.tree)) == 10
-    design = next(i for i in all_items(view.tree) if i.text(C_TITLE) == "Vizuelni dizajn")
+    design = next(
+        i for i in all_items(view.tree) if i.text(C_TITLE) == "AML procena rizika partnera"
+    )
     assert design.childCount() == 2 and design.isExpanded()
     assert view.count_label.text() == "10 zadataka"
 
@@ -52,7 +54,7 @@ def test_filters_switch_to_flat_list(window):
     view = list_view(window)
     view.status_filter.setCurrentIndex(view.status_filter.findData(TaskStatus.DONE))
     titles = [i.text(C_TITLE) for i in all_items(view.tree)]
-    assert titles == ["Brief i prikupljanje sadržaja", "Wireframe glavnih stranica"]
+    assert titles == ["Početni sastanak i obim saradnje", "KYB dokumentacija partnera"]
     assert view.clear_button.isVisible()
     view.clear_filters()
     assert len(all_items(view.tree)) == 10
@@ -60,9 +62,9 @@ def test_filters_switch_to_flat_list(window):
 
 def test_search_from_header(window, qtbot):
     view = list_view(window)
-    window.ctx.set_search("meni")
+    window.ctx.set_search("sankcion")
     titles = [i.text(C_TITLE) for i in all_items(view.tree)]
-    assert titles == ["Vizuelni dizajn  ›  Meni i cenovnik"]
+    assert titles == ["AML procena rizika partnera  ›  Provera sankcionih lista"]
     window.ctx.set_search("")
 
 
@@ -77,7 +79,7 @@ def test_sort_by_due_and_back(window):
 
 def test_status_change_from_menu_action(window):
     view = list_view(window)
-    item = next(i for i in all_items(view.tree) if i.text(C_TITLE) == "Odobrenje klijenta")
+    item = next(i for i in all_items(view.tree) if i.text(C_TITLE) == "Odobrenje Compliance-a")
     view.tree.setCurrentItem(item)
     tid = item.data(C_TITLE, ROLE_ID)
     view.set_status(TaskStatus.DONE)
@@ -122,13 +124,13 @@ def test_edit_dialog_mark_done_and_dependency(window, qtbot):
         review = next(
             t
             for t, _ in task_service.tree(s, window.ctx.project_id)
-            if t.title == "Odobrenje klijenta"
+            if t.title == "Odobrenje Compliance-a"
         )
         rid = review.id
     dlg = TaskDialog(window.ctx, rid, window)
     qtbot.addWidget(dlg)
     assert dlg.tabs.count() == 6
-    assert dlg.deps_list.count() == 1  # čeka na Vizuelni dizajn
+    assert dlg.deps_list.count() == 1  # čeka na AML procena rizika partnera
     dlg.note_edit.setText("Poslat mejl klijentu")
     dlg._add_note()
     assert dlg.notes_list.count() == 1
@@ -146,7 +148,7 @@ def test_time_tab_and_status_bar_timer(window, qtbot):
         tid = next(
             t.id
             for t, _ in task_service.tree(s, window.ctx.project_id)
-            if t.title == "Izrada sajta"
+            if t.title == "Razvoj integracije"
         )
     dlg = TaskDialog(window.ctx, tid, window)
     qtbot.addWidget(dlg)
@@ -159,7 +161,7 @@ def test_time_tab_and_status_bar_timer(window, qtbot):
     dlg._toggle_timer()
     assert dlg.timer_button.text() == "Zaustavi tajmer"
     assert window.timer_widget.isVisibleTo(window)
-    assert window.timer_widget.title.text() == "Izrada sajta"
+    assert window.timer_widget.title.text() == "Razvoj integracije"
     dlg._save()  # čuvanje ne prepisuje utrošeno sate iz unosa
     with window.db.session() as s:
         assert task_service.get(s, tid).actual_hours == 1.5

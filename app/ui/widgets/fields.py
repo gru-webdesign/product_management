@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QAbstractButton,
     QButtonGroup,
     QCheckBox,
+    QComboBox,
     QDateEdit,
     QHBoxLayout,
     QLineEdit,
@@ -74,7 +75,9 @@ class OptionalDateField(QWidget):
 def parse_amount(text: str) -> Decimal:
     """Prihvata '1.234,56', '1234,56', '1234.56', '1 234' → Decimal."""
     t = text.strip().replace(" ", "").replace(" ", "")
-    for cur in ("RSD", "EUR", "USD", "din", "€"):
+    from app.services.money import SUPPORTED_CURRENCIES
+
+    for cur in (*SUPPORTED_CURRENCIES, "din", "€", "KM", "$"):
         t = t.replace(cur, "")
     if not t:
         return Decimal("0")
@@ -169,3 +172,35 @@ class ColorPicker(QWidget):
     def value(self) -> str:
         checked = self.group.checkedButton()
         return checked.color if checked else self.swatches[0].color
+
+
+class SuggestCombo(QComboBox):
+    """Padajuća lista sa predlozima u koju može da se upiše i sopstvena vrednost.
+
+    Predlozi = ugrađena lista + vrednosti koje su ranije upisane u bazu. Prazno je dozvoljeno.
+    """
+
+    def __init__(self, suggestions: list[str], value: str = "", placeholder: str = "") -> None:
+        super().__init__()
+        self.setEditable(True)
+        self.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.setMaxVisibleItems(16)
+        self.addItem("")
+        for s in suggestions:
+            if s:
+                self.addItem(s)
+        completer = self.completer()
+        completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        completer.setFilterMode(Qt.MatchFlag.MatchContains)
+        completer.setCompletionMode(completer.CompletionMode.PopupCompletion)
+        self.lineEdit().setPlaceholderText(placeholder or "Izaberi ili upiši")
+        self.set_value(value)
+
+    def set_value(self, value: str) -> None:
+        value = value or ""
+        if value and self.findText(value) < 0:
+            self.addItem(value)
+        self.setCurrentText(value)
+
+    def value(self) -> str:
+        return " ".join(self.currentText().split())

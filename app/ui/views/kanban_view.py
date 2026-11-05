@@ -297,12 +297,7 @@ class KanbanView(ProjectView):
             f"#QuickAdd {{ background: transparent; border: 1px dashed {t.border_strong}; }}"
             f"#QuickAdd:focus {{ background: {t.surface}; border: 1px solid {t.accent}; }}"
         )
-        colors = {
-            TaskStatus.TODO: t.faint,
-            TaskStatus.IN_PROGRESS: t.accent,
-            TaskStatus.REVIEW: t.warning,
-            TaskStatus.DONE: t.success,
-        }
+        colors = theme.status_colors(t)
         for status, frame in self.columns.items():
             frame.dot.setStyleSheet(f"background: {colors[status]}; border-radius: 4px;")
 

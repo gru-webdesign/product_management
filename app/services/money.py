@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from decimal import ROUND_HALF_UP, Decimal
 
-SUPPORTED_CURRENCIES = ("RSD", "EUR", "USD")
+SUPPORTED_CURRENCIES = ("RSD", "EUR", "USD", "CHF", "GBP", "BAM", "MKD", "HUF")
 
 
 def to_minor(amount: Decimal | int | float | str) -> int:

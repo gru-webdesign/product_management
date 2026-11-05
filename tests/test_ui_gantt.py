@@ -91,8 +91,8 @@ def test_rows_bars_and_dependencies_drawn(gantt):
 def test_drag_moves_task_and_pushes_successors(gantt):
     w, view = gantt
     chart = view.chart
-    tid = task_id(w, "Odobrenje klijenta")
-    dev = task_id(w, "Izrada sajta")
+    tid = task_id(w, "Odobrenje Compliance-a")
+    dev = task_id(w, "Razvoj integracije")
     s0, e0 = get(w, tid)
     dev0 = get(w, dev)
     bar = chart.bars[tid]
@@ -107,7 +107,7 @@ def test_drag_moves_task_and_pushes_successors(gantt):
 def test_drag_right_edge_changes_duration(gantt):
     w, view = gantt
     chart = view.chart
-    tid = task_id(w, "Objava i obuka")
+    tid = task_id(w, "Go-live")
     s0, e0 = get(w, tid)
     bar = chart.bars[tid]
     visible(chart, bar)
@@ -120,8 +120,8 @@ def test_drag_right_edge_changes_duration(gantt):
 def test_link_handle_creates_dependency(gantt):
     w, view = gantt
     chart = view.chart
-    a = task_id(w, "Brief i prikupljanje sadržaja")
-    b = task_id(w, "Objava i obuka")
+    a = task_id(w, "Početni sastanak i obim saradnje")
+    b = task_id(w, "Go-live")
     bar_a, bar_b = chart.bars[a], chart.bars[b]
     visible(chart, bar_a)
     # hover otkriva kružić za povezivanje
@@ -166,7 +166,7 @@ def test_milestone_move_and_undated_scheduling(gantt):
     with w.db.session() as s:
         assert ms_service.for_project(s, w.ctx.project_id)[0].date == day + timedelta(days=1)
 
-    tid = task_id(w, "Testiranje na telefonima")
+    tid = task_id(w, "UAT sa partnerom")
     w.ctx.run(lambda s: task_service.set_dates(s, task_service.get(s, tid), None, None))
     assert tid not in view.chart.bars
     view._schedule_undated(tid, date.today())
@@ -180,7 +180,7 @@ def test_cycle_link_rejected_without_crash(gantt, monkeypatch):
 
     shown = []
     monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: shown.append(a[2]))
-    a = task_id(w, "Brief i prikupljanje sadržaja")
-    z = task_id(w, "Objava i obuka")
+    a = task_id(w, "Početni sastanak i obim saradnje")
+    z = task_id(w, "Go-live")
     view._link(z, a)  # Objava → Brief bi napravila krug
     assert shown and "krug" in shown[0]

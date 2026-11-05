@@ -32,12 +32,12 @@ from PySide6.QtWidgets import (
 
 from app.db.models import DependencyType, Priority, Task, TaskStatus
 from app.labels import DEPENDENCY_TYPE, FIELD, PRIORITY, TASK_STATUS
-from app.services import activity
+from app.services import activity, suggestions
 from app.services import dependencies as dep_service
 from app.services import tasks as task_service
 from app.ui import icons, theme
 from app.ui.context import AppContext
-from app.ui.widgets.fields import MoneyEdit, OptionalDateField
+from app.ui.widgets.fields import MoneyEdit, OptionalDateField, SuggestCombo
 
 ROLE_ID = Qt.ItemDataRole.UserRole
 
@@ -79,6 +79,9 @@ class TaskDialog(QDialog):
                 if t.id not in excluded
             ]
             self._all_tags = task_service.all_tags(s)
+            self._suggest = {
+                f: suggestions.for_field(s, f) for f in ("work_type", "phase", "people")
+            }
             data = self._snapshot(task) if task else None
 
         root = QVBoxLayout(self)
@@ -150,6 +153,9 @@ class TaskDialog(QDialog):
             "parent_id": task.parent_id,
             "tags": [t.name for t in task.tags],
             "has_time": bool(task.time_entries),
+            "work_type": task.work_type,
+            "phase": task.phase,
+            "owner": task.owner,
         }
 
     def _details_tab(self, data, defaults) -> QWidget:
@@ -177,6 +183,20 @@ class TaskDialog(QDialog):
         row1.addWidget(QLabel("Prioritet"))
         row1.addWidget(self.priority, 1)
         form.addRow("Status", row1)
+
+        self.owner = SuggestCombo(
+            self._suggest["people"], d.get("owner", defaults.get("owner", "")), "osoba ili tim"
+        )
+        form.addRow("Nosilac", self.owner)
+        self.work_type = SuggestCombo(self._suggest["work_type"], d.get("work_type", ""))
+        self.phase = SuggestCombo(self._suggest["phase"], d.get("phase", defaults.get("phase", "")))
+        row_kind = QHBoxLayout()
+        row_kind.setSpacing(8)
+        row_kind.addWidget(self.work_type, 1)
+        row_kind.addSpacing(14)
+        row_kind.addWidget(QLabel("Faza"))
+        row_kind.addWidget(self.phase, 1)
+        form.addRow("Vrsta rada", row_kind)
 
         self.start = OptionalDateField(d.get("start_date", defaults.get("start_date")), "Postavi")
         self.due = OptionalDateField(d.get("due_date", defaults.get("due_date")), "Postavi")
@@ -218,7 +238,7 @@ class TaskDialog(QDialog):
         form.addRow("Planirani trošak", self.cost)
 
         self.tags = QLineEdit(", ".join(d.get("tags", [])))
-        self.tags.setPlaceholderText("npr. dizajn, klijent (odvojeno zarezom)")
+        self.tags.setPlaceholderText("npr. TNapp, partner, regulativa (odvojeno zarezom)")
         completer = QCompleter(self._all_tags, self.tags)
         completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.tags.setCompleter(completer)
@@ -234,7 +254,7 @@ class TaskDialog(QDialog):
         form.addRow("Nadređeni", self.parent_combo)
 
         self.description = QPlainTextEdit(d.get("description", ""))
-        self.description.setPlaceholderText("Opis, linkovi, napomene…")
+        self.description.setPlaceholderText("Opis, kriterijumi prihvatanja, linkovi, napomene…")
         self.description.setMinimumHeight(80)
         form.addRow("Opis", self.description)
         return w
@@ -478,6 +498,9 @@ class TaskDialog(QDialog):
             "parent_id": self.parent_combo.currentData(),
             "description": self.description.toPlainText().strip(),
             "tags": [t for t in self.tags.text().split(",") if t.strip()],
+            "work_type": self.work_type.value(),
+            "phase": self.phase.value(),
+            "owner": self.owner.value(),
         }
 
     def _save(self) -> None:

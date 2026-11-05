@@ -210,6 +210,12 @@ class Sidebar(QFrame):
         self._theme_changed()
         self.reload()
 
+    def _suggest(self) -> dict[str, list[str]]:
+        from app.services import suggestions
+
+        with self.ctx.session() as s:
+            return {f: suggestions.for_field(s, f) for f in ("project_type", "people", "client")}
+
     def _theme_changed(self) -> None:
         t = theme.tokens()
         self.dashboard_button.setIcon(icons.icon("dashboard", t.sidebar_text))
@@ -290,7 +296,7 @@ class Sidebar(QFrame):
 
         with self.ctx.session() as s:
             infos = template_service.list_templates(s)
-        dlg = ProjectDialog(parent=self.window(), templates=infos)
+        dlg = ProjectDialog(parent=self.window(), templates=infos, suggest=self._suggest())
         if dlg.exec():
             values = dlg.values()
             template_id = dlg.template_id()
@@ -314,7 +320,7 @@ class Sidebar(QFrame):
             return
         with self.ctx.session() as s:
             project = project_service.get(s, pid)
-        dlg = ProjectDialog(project, parent=self.window())
+        dlg = ProjectDialog(project, parent=self.window(), suggest=self._suggest())
         if dlg.exec():
             values = dlg.values()
             self.ctx.run(
