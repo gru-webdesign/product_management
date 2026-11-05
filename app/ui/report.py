@@ -76,6 +76,10 @@ def gantt_image(session: Session, project_id: str) -> QImage | None:
         return image
     finally:
         manager.tokens = previous
+        # Dok su važile svetle boje, prozor se možda iscrtao njima; osveži sve vidljivo.
+        for widget in QApplication.allWidgets():
+            if widget.isVisible():
+                widget.update()
 
 
 def _h(text: str) -> str:

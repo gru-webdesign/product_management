@@ -137,3 +137,22 @@ def test_pdf_report(qtbot, session, tmp_path):
     path = write_pdf(session, p.id, tmp_path / "r.pdf")
     data = path.read_bytes()
     assert data.startswith(b"%PDF") and len(data) > 10_000
+
+
+def test_pdf_export_keeps_window_colors(qtbot, session, tmp_path):
+    from datetime import date
+
+    from app.ui import theme
+    from app.ui.report import write_pdf
+    from scripts.seed_demo import seed
+
+    manager = theme.manager()
+    before = manager.tokens
+    manager.tokens = theme.DARK
+    try:
+        p = seed(session, today=date(2026, 10, 29))
+        session.commit()
+        write_pdf(session, p.id, tmp_path / "r.pdf")
+        assert theme.tokens() is theme.DARK  # boje prozora se vraćaju posle slike Ganta
+    finally:
+        manager.tokens = before
