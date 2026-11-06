@@ -151,3 +151,24 @@ def test_new_task_with_suggested_steps(window):
 
         task = task_service.get(s, dlg.task_id)
         assert len(task.subtasks) == n and task.subtasks[0].work_type == "Razvoj"
+
+
+def test_new_task_with_dependency(window):
+    from app.db.models import DependencyType
+    from app.services import tasks as task_service
+    from app.ui.dialogs.task_dialog import TaskDialog
+
+    dlg = TaskDialog(window.ctx, None, window)
+    assert dlg.tabs.tabText(2) == "Zavisnosti"
+    dlg.title_edit.setText("Obuka podrške za novi servis")
+    dlg.dep_task.setCurrentIndex(dlg.dep_task.findText("UAT sa partnerom"))
+    dlg.dep_type.setCurrentIndex(dlg.dep_type.findData(DependencyType.FINISH_TO_START))
+    dlg.dep_lag.setValue(1)
+    dlg._add_dependency()
+    dlg._add_dependency()  # isti prethodnik se ne dodaje dvaput
+    assert len(dlg._pending_deps) == 1
+    dlg._save()
+    with window.ctx.session() as s:
+        task = task_service.get(s, dlg.task_id)
+        uat = task.predecessors[0].predecessor
+        assert uat.title == "UAT sa partnerom" and task.predecessors[0].lag_days == 1

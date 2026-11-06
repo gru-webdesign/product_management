@@ -75,7 +75,7 @@ def main() -> int:
             if t.title == "AML procena rizika partnera"
         )
         design_id = design.id
-    for tab, label in ((0, "detalji"), (1, "koraci"), (3, "zavisnosti"), (4, "vreme")):
+    for tab, label in ((0, "detalji"), (1, "koraci"), (2, "zavisnosti"), (4, "vreme")):
         dlg = TaskDialog(window.ctx, design_id, window)
         dlg.tabs.setCurrentIndex(tab)
         dlg.show()

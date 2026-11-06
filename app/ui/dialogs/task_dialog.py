@@ -118,9 +118,11 @@ class TaskDialog(QDialog):
         self.tabs.addTab(self._details_tab(data, defaults), "Detalji")
         self.tabs.addTab(self._steps_tab(), "Koraci")
         self._render_steps()
+        # zavisnosti novog zadatka se pamte i upisuju pri čuvanju
+        self._pending_deps: list[tuple[str, DependencyType, int, str]] = []
+        self.tabs.addTab(self._deps_tab(), "Zavisnosti")
         if task_id:
             self.tabs.addTab(self._notes_tab(), "Beleške")
-            self.tabs.addTab(self._deps_tab(), "Zavisnosti")
             self.tabs.addTab(self._time_tab(), "Vreme")
             self.tabs.addTab(self._comments_tab(), "Komentari")
             self.tabs.addTab(self._history_tab(), "Istorija")
@@ -734,6 +736,8 @@ class TaskDialog(QDialog):
                 values["progress"] = 100
             task = task_service.create(s, self.project_id, tags=tags, **values)
             self._save_steps(s, task)
+            for pred_id, dep_type, lag, _title in self._pending_deps:
+                dep_service.add(s, task_service.get(s, pred_id), task, dep_type, lag)
             return task.id
 
         result = self.ctx.run(work, self)
@@ -794,6 +798,17 @@ class TaskDialog(QDialog):
 
     def _load_deps(self) -> None:
         self.deps_list.clear()
+        for i, (_pid, dep_type, lag, title) in enumerate(self._pending_deps):
+            extra = f", kašnjenje {lag} d" if lag else ""
+            item = QListWidgetItem(f"{title}   ({DEPENDENCY_TYPE[dep_type]}{extra})")
+            item.setData(ROLE_ID, f"pending:{i}")
+            self.deps_list.addItem(item)
+        if not self.task_id:
+            if self.deps_list.count() == 0:
+                item = QListWidgetItem("Nema zavisnosti. Zadatak može da počne odmah.")
+                item.setFlags(Qt.ItemFlag.NoItemFlags)
+                self.deps_list.addItem(item)
+            return
         with self.ctx.session() as s:
             task = task_service.get(s, self.task_id)
             for dep in task.predecessors:
@@ -813,6 +828,12 @@ class TaskDialog(QDialog):
             return
         dep_type: DependencyType = self.dep_type.currentData()
         lag = self.dep_lag.value()
+        if not self.task_id:
+            if all(d[0] != pred_id for d in self._pending_deps):
+                title = self.dep_task.currentText().strip()
+                self._pending_deps.append((pred_id, dep_type, lag, title))
+            self._load_deps()
+            return
 
         def work(s):
             dep_service.add(
@@ -828,6 +849,10 @@ class TaskDialog(QDialog):
         item = self.deps_list.currentItem()
         dep_id = item.data(ROLE_ID) if item else None
         if not dep_id:
+            return
+        if dep_id.startswith("pending:"):
+            del self._pending_deps[int(dep_id.split(":")[1])]
+            self._load_deps()
             return
         from app.db.models import TaskDependency
 
