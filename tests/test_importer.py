@@ -94,3 +94,36 @@ def test_import_dialog(qtbot, db, tmp_path, monkeypatch):
     dlg.do_import()
     assert dlg.result.tasks == 4 and dlg.result.projects == 1
     assert not dlg.load(tmp_path / "nema.pdf")
+
+
+def test_exports_do_not_turn_text_into_formulas(session, tmp_path):
+    from openpyxl import load_workbook
+
+    from app.services import export_csv, export_xlsx
+
+    p = projects_svc.create(session, name="P")
+    tasks_svc.create(session, p.id, title='=HYPERLINK("http://x","klik")', owner="+381 11 222")
+    path = export_xlsx.write(session, p.id, tmp_path / "x.xlsx")
+    wb = load_workbook(path)
+    assert not [c for ws in wb for row in ws.iter_rows() for c in row if c.data_type == "f"]
+    assert any(str(c.value).startswith("=HYPERLINK") for c in wb["Zadaci"][2])  # tekst je sačuvan
+    text = export_csv.tasks_csv(session, p.id)
+    assert "'=HYPERLINK" in text and "'+381" in text
+    assert export_csv.safe_cell("-12,50") == "-12,50"  # broj ostaje broj
+
+
+def test_importer_survives_garbage(session):
+    import random
+
+    rng = random.Random(7)
+    header = [h for h, _ in importer.TEMPLATE_HELP]
+    junk = [None, "", " ", "x" * 500, -5, 0, 1e12, 3.7, "31.02.2026", "2026-13-01"]
+    junk += ["abc", dt.datetime(2026, 1, 1), "=1+1", "Završeno", "1.000,5", "50%", "Ž;č,ć", "\t"]
+    for _ in range(30):
+        table = [header] + [[rng.choice(junk) for _ in header] for _ in range(rng.randint(0, 40))]
+        try:
+            plan = importer.plan(session, table, default_project="Smeće")
+        except ValueError:
+            continue
+        importer.apply(session, plan, today=D)
+        session.flush()

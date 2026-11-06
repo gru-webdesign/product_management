@@ -126,6 +126,7 @@ class LegendRow(QWidget):
         self.dot = QLabel()
         self.dot.setFixedSize(10, 10)
         self.name = QLabel()
+        self.name.setTextFormat(Qt.TextFormat.PlainText)
         self.name.setProperty("muted", True)
         self.count = QLabel()
         self.count.setFont(theme.mono(self.font()))
@@ -216,6 +217,8 @@ class FeedRow(QWidget):
         self.text.setSpacing(1)
         self.title = QLabel()
         self.sub = QLabel()
+        for label in (self.title, self.sub):
+            label.setTextFormat(Qt.TextFormat.PlainText)
         self.sub.setProperty("muted", True)
         f = self.sub.font()
         f.setPointSizeF(f.pointSizeF() - 0.75)

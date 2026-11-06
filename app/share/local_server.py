@@ -11,6 +11,8 @@ Radi u pozadinskoj niti; svaki zahtev otvara svoju sesiju baze. Ne importuje Qt.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import re
 import secrets
@@ -101,6 +103,24 @@ class _Limiter:
             self.hits[key].append(time.monotonic())
 
 
+def _cookie_secret(db: Database) -> bytes:
+    """Tajna za kolačić posle PIN-a; čuva se u bazi da kolačić važi i posle restarta."""
+    from app.services.defaults import get_setting, set_setting
+
+    with db.session() as s:
+        value = get_setting(s, "share.cookie_secret")
+        if not value:
+            value = secrets.token_hex(32)
+            set_setting(s, "share.cookie_secret", value)
+            s.commit()
+    return bytes.fromhex(value)
+
+
+def cookie_value(secret: bytes, token: str, pin_hash: str) -> str:
+    """Kolačić ne otkriva PIN ni njegov heš; promena PIN-a ga poništava."""
+    return hmac.new(secret, f"{token}:{pin_hash}".encode(), hashlib.sha256).hexdigest()
+
+
 class LocalShareServer:
     """HTTP server u pozadinskoj niti. on_comment(project_id) se zove iz te niti."""
 
@@ -115,6 +135,7 @@ class LocalShareServer:
         self.on_comment = on_comment
         self.pin_limiter = _Limiter(PIN_TRIES, PIN_WINDOW)
         self.comment_limiter = _Limiter(COMMENTS_PER_MINUTE, 60)
+        self.secret = _cookie_secret(db)
         handler = type("Handler", (_Handler,), {"app": self})
         self.httpd = ThreadingHTTPServer((host, port), handler)
         self.httpd.daemon_threads = True
@@ -145,6 +166,7 @@ class _Handler(BaseHTTPRequestHandler):
     app: LocalShareServer
     server_version = "Etapa"
     sys_version = ""
+    timeout = 15  # spora ili prazna veza se zatvara, ne drži nit zauvek
 
     def log_message(self, format, *args) -> None:  # noqa: A002 (potpis iz biblioteke)
         pass  # bez ispisa u konzolu
@@ -218,7 +240,8 @@ class _Handler(BaseHTTPRequestHandler):
             return True
         cookie = SimpleCookie(self.headers.get("Cookie") or "")
         morsel = cookie.get(f"etapa_{link.token}")
-        return bool(morsel) and secrets.compare_digest(morsel.value, link.pin_hash)
+        expected = cookie_value(self.app.secret, link.token, link.pin_hash)
+        return bool(morsel) and secrets.compare_digest(morsel.value, expected)
 
     def _route(self) -> tuple[str, str, str]:
         path = self.path.split("?", 1)[0]
@@ -292,7 +315,7 @@ class _Handler(BaseHTTPRequestHandler):
                 self.app.pin_limiter.hit(ip)
                 self._pin_page(token, wrong=True)
                 return
-            value = link.pin_hash
+            value = cookie_value(self.app.secret, link.token, link.pin_hash)
         self.send_response(HTTPStatus.SEE_OTHER)
         self.send_header("Location", f"/p/{token}")
         self.send_header(
@@ -308,6 +331,11 @@ class _Handler(BaseHTTPRequestHandler):
             self._json(
                 {"error": "Previše komentara za kratko vreme, pokušaj ponovo za minut."}, 429
             )
+            return
+        ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+        if ctype != "application/json":
+            # obična forma ili text/plain sa druge stranice (CSRF) ne prolazi
+            self._json({"error": "Neispravan zahtev."}, 415)
             return
         body = self._body()
         if body is None:

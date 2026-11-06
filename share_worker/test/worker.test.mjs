@@ -35,6 +35,11 @@ const sha = (s) => createHash("sha256").update(s).digest("hex");
 
 beforeEach(() => { env = { SHARES: new MemoryKV(), ADMIN_KEY }; });
 
+async function sha256(text) {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 describe("administracija", () => {
   it("odbija bez ključa i sa pogrešnim ključem", async () => {
     assert.equal((await call("/api/admin/ping")).status, 401);
@@ -104,7 +109,7 @@ describe("komentari", () => {
     assert.equal((await comment({ text: "   " })).status, 400);
     assert.equal((await comment({ text: "x".repeat(2001) })).status, 400);
     assert.equal((await comment({ text: "x", task_id: "<script>" })).status, 400);
-    assert.equal((await call(`/api/comments/${TOKEN}`, { method: "POST", body: "nije json" })).status, 400);
+    assert.equal((await call(`/api/comments/${TOKEN}`, { method: "POST", headers: { "content-type": "application/json" }, body: "nije json" })).status, 400);
   });
 
   it("ograničava broj komentara po minutu", async () => {
@@ -146,6 +151,23 @@ describe("PIN", () => {
     const page = await call(`/p/${TOKEN}`, { headers: { cookie } });
     assert.equal(await page.text(), "<p>tajno</p>");
     assert.equal((await comment({ text: "sa PIN-om" }, { cookie })).status, 201);
+    // kolačić ne otkriva heš PIN-a
+    assert.doesNotMatch(cookie, new RegExp(await sha256(`${TOKEN}:${PIN}`)));
+    // komentar mora biti JSON (forma sa druge stranice ne prolazi)
+    const form = await call(`/api/comments/${TOKEN}`, {
+      method: "POST", headers: { cookie, "content-type": "text/plain" }, body: JSON.stringify({ text: "x" }),
+    });
+    assert.equal(form.status, 415);
+  });
+
+  it("posle 10 pogrešnih PIN-ova link se zaključava na 10 minuta", async () => {
+    let last;
+    for (let i = 0; i < 11; i++) {
+      last = await call(`/p/${TOKEN}/unlock`, { method: "POST", body: new URLSearchParams({ pin: `9${i}` }) });
+    }
+    assert.equal(last.status, 429);
+    const ok = await call(`/p/${TOKEN}/unlock`, { method: "POST", body: new URLSearchParams({ pin: PIN }) });
+    assert.equal(ok.status, 429);
   });
 });
 

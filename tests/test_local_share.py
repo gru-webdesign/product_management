@@ -73,7 +73,14 @@ def test_comments_go_straight_to_database(served):
     shown = client.get(f"/api/comments/{token}").json()["comments"]
     assert shown[0]["author"] == "Marko" and "id" not in shown[0]
     assert client.post(f"/api/comments/{token}", json={"text": "  "}).status_code == 400
-    assert client.post(f"/api/comments/{token}", content=b"x" * 20_000).status_code == 413
+    assert (
+        client.post(
+            f"/api/comments/{token}",
+            content=b"x" * 20_000,
+            headers={"Content-Type": "application/json"},
+        ).status_code
+        == 413
+    )
 
 
 def test_pin_protects_page_and_comments(served):
@@ -110,3 +117,38 @@ def test_disabled_link_stops_working(served):
         assert not sharing.has_live_links(s)
     assert client.get(f"/p/{token}").status_code == 404
     assert client.post(f"/api/comments/{token}", json={"text": "x"}).status_code == 404
+
+
+def test_cookie_does_not_reveal_pin_hash_and_csrf_blocked(served):
+    db, client, pid, token, _ = served
+    with db.session() as s:
+        sharing.enable_local(s, pid, pin="4321")
+        s.commit()
+        pin_hash = sharing.active_link(s, pid).pin_hash
+    ok = client.post(f"/p/{token}/unlock", data={"pin": "4321"})
+    assert pin_hash not in ok.headers["set-cookie"]
+    # obična forma ili text/plain (npr. sa druge stranice) ne može da pošalje komentar
+    r = client.post(
+        f"/api/comments/{token}", content='{"text": "x"}', headers={"Content-Type": "text/plain"}
+    )
+    assert r.status_code == 415
+    assert client.post(f"/api/comments/{token}", json={"text": "ok"}).status_code == 201
+    # promena PIN-a poništava stari kolačić
+    with db.session() as s:
+        sharing.enable_local(s, pid, pin="9999")
+        s.commit()
+    assert "Unesi PIN" in client.get(f"/p/{token}").text
+
+
+def test_slow_connection_is_closed(served, monkeypatch):
+    import socket
+
+    from app.share import local_server
+
+    db, client, *_ = served
+    monkeypatch.setattr(local_server._Handler, "timeout", 1)
+    port = int(str(client.base_url).rsplit(":", 1)[1])
+    sock = socket.create_connection(("127.0.0.1", port))
+    sock.settimeout(5)
+    assert sock.recv(10) == b""  # server zatvara vezu koja ništa ne šalje
+    sock.close()

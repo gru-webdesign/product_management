@@ -22,7 +22,8 @@ from app.db.models import DependencyType, Priority, Project, Task, TaskStatus
 from app.services import dependencies as dep_service
 from app.services import projects as project_service
 from app.services import tasks as task_service
-from app.services import timetracking
+
+MAX_ROWS = 20_000  # zaštita od ogromnih ili pogrešno izabranih fajlova
 
 # polje → kolona u šablonu i drugi nazivi pod kojima se kolona prepoznaje
 COLUMNS: dict[str, tuple[str, ...]] = {
@@ -268,6 +269,8 @@ def plan(session: Session, table: list[list], default_project: str = "") -> Plan
     table = [r for r in table if any(_norm(c) for c in (r or []))]
     if not table:
         raise ValueError("Tabela je prazna.")
+    if len(table) > MAX_ROWS + 1:
+        raise ValueError(f"Tabela ima {len(table) - 1} redova; najviše može {MAX_ROWS} odjednom.")
     mapping, unknown = map_columns(table[0])
     if "title" not in mapping:
         raise ValueError(
@@ -421,6 +424,9 @@ def apply(session: Session, p: Plan, today: dt.date | None = None) -> Result:
     for r in ordered:
         project = projects[r.project.casefold()]
         values = dict(r.values)
+        if r.actual_hours:
+            # ukupno utrošeno iz tabele (može biti i 300 h) ide kao ručna vrednost zadatka
+            values["actual_hours"] = round(r.actual_hours, 2)
         if r.parent:
             parent = lookup(project, r.parent)
             if parent is not None and parent.title.casefold() != r.title.casefold():
@@ -429,9 +435,6 @@ def apply(session: Session, p: Plan, today: dt.date | None = None) -> Result:
             session, project.id, title=r.title, tags=r.tags or None, **values
         )
         created[(project.id, r.title.casefold())] = task
-        if r.actual_hours:
-            day = values.get("due_date") or values.get("start_date") or today
-            timetracking.add_entry(session, task.id, min(day, today), r.actual_hours, "Uvezeno")
 
     deps = 0
     for r in ordered:
@@ -468,7 +471,7 @@ TEMPLATE_HELP = [
     ("Početak", "Datum, npr. 15.03.2026."),
     ("Rok", "Datum, npr. 30.03.2026."),
     ("Procena (h)", "Broj sati."),
-    ("Utrošeno (h)", "Broj sati; upisuje se kao jedan unos vremena."),
+    ("Utrošeno (h)", "Ukupno utrošeno sati na zadatku."),
     ("Progres (%)", "0 do 100. Završen zadatak dobija 100."),
     ("Planirani trošak", "Iznos u osnovnoj valuti (npr. 15000)."),
     ("Tagovi", "Odvojeno zarezom, npr. TNapp, partner."),

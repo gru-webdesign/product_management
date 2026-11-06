@@ -211,8 +211,20 @@ def build(session: Session, project_id: str) -> Workbook:
 
 
 def write(session: Session, project_id: str, path: Path) -> Path:
-    build(session, project_id).save(path)
+    wb = build(session, project_id)
+    _no_formulas(wb)
+    wb.save(path)
     return path
+
+
+def _no_formulas(wb: Workbook) -> None:
+    """openpyxl tekst koji počinje sa = upisuje kao formulu; naziv zadatka nije formula."""
+    for ws in wb.worksheets:
+        for row in ws.iter_rows():
+            for cell in row:
+                if cell.data_type == "f":
+                    cell.data_type = "s"
+                    cell.quotePrefix = True
 
 
 def _registry_sheets(wb: Workbook, session: Session, project_id: str) -> None:

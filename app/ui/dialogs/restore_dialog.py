@@ -77,9 +77,17 @@ class RestoreDialog(QDialog):
         from pathlib import Path
 
         db = self.ctx.db
+        source = Path(item.data(Qt.ItemDataRole.UserRole))
+        try:
+            backup.check(source)
+        except backup.CorruptDatabase as exc:
+            QMessageBox.warning(
+                self, "Kopija je oštećena", f"Ova kopija ne može da se vrati.\n\n{exc}"
+            )
+            return
         backup.create_backup(db.paths)
         db.dispose()
-        backup.restore_backup(db.paths, Path(item.data(Qt.ItemDataRole.UserRole)))
+        backup.restore_backup(db.paths, source)
         db.upgrade()
         with db.session() as s:
             ensure_defaults(s)

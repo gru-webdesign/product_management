@@ -37,6 +37,29 @@ def set_locale() -> None:
     QLocale.setDefault(locale)
 
 
+def _offer_recovery(reason: str) -> bool:
+    """Baza je oštećena: ponudi vraćanje poslednje ispravne kopije."""
+    paths = get_paths()
+    good = [b for b in backup.list_backups(paths)]
+    text = f"Baza podataka je oštećena i ne može da se otvori.\n\nDetalji: {reason}\n\n" + (
+        "Vratiti najnoviju ispravnu automatsku kopiju? Oštećeni fajl se ne briše, nego se "
+        "čuva u folderu sa podacima."
+        if good
+        else "Nema automatskih kopija. Napraviti novu praznu bazu? Oštećeni fajl se čuva "
+        "u folderu sa podacima."
+    )
+    answer = QMessageBox.question(None, APP_NAME, text)
+    if answer != QMessageBox.StandardButton.Yes:
+        return False
+    used = backup.recover(paths)
+    QMessageBox.information(
+        None,
+        APP_NAME,
+        f"Baza je vraćena iz kopije {used.name}." if used else "Napravljena je nova prazna baza.",
+    )
+    return True
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     logging.getLogger("alembic").setLevel(logging.WARNING)
@@ -52,7 +75,12 @@ def main() -> int:
     app.setWindowIcon(QIcon(str(Path(__file__).parent / "resources" / "icons" / "app.png")))
 
     try:
-        db = bootstrap()
+        try:
+            db = bootstrap()
+        except backup.CorruptDatabase as exc:
+            if not _offer_recovery(str(exc)):
+                return 1
+            db = bootstrap()
     except Exception as exc:  # prikaži grešku umesto tihog gašenja
         log.exception("Pokretanje nije uspelo")
         QMessageBox.critical(None, APP_NAME, f"Baza podataka nije mogla da se otvori:\n\n{exc}")

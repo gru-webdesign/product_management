@@ -129,6 +129,9 @@ def delete_entry(session: Session, entry: TimeEntry) -> None:
     session.flush()
     if task is not None:
         recalc(session, task)
+        if total_hours(session, task.id) == 0 and not entries(session, task.id):
+            task.actual_hours = 0.0  # obrisan je i poslednji unos: utrošeno je bilo iz unosa
+            session.flush()
 
 
 def entries(session: Session, task_id: str) -> list[TimeEntry]:

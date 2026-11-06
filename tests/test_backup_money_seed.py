@@ -53,3 +53,59 @@ def test_seed_demo_and_reseed(session):
     assert session.scalar(select(func.count(TaskDependency.id))) == 8
     figma = session.scalar(select(CostEntry).where(CostEntry.vendor == "Atlassian"))
     assert figma.amount_base_minor == to_minor("10430.80")
+
+
+def test_backups_keep_one_per_day_and_skip_corrupt_db(tmp_path):
+    from datetime import datetime, timedelta
+
+    import pytest
+
+    from app.config import get_paths
+    from app.main import bootstrap
+    from app.services import backup
+    from app.services import projects as projects_svc
+
+    paths = get_paths(tmp_path).ensure()
+    db = bootstrap(paths)
+    with db.session() as s:
+        projects_svc.create(s, name="Važan projekat")
+        s.commit()
+    db.dispose()
+    start = datetime(2026, 10, 1, 9)
+    for day in range(5):  # jedan start dnevno
+        backup.create_backup(paths, keep=3, now=start + timedelta(days=day))
+    for i in range(12):  # pa 12 startova istog dana
+        backup.create_backup(paths, keep=3, now=start + timedelta(days=5, minutes=i))
+    names = [b.name for b in backup.list_backups(paths)]
+    days = {n[6:14] for n in names}
+    assert len(days) == 6 and len(names) == 3 + 5  # 3 poslednje + po jedna za ranije dane
+
+    paths.db_path.write_bytes(b"ovo nije baza" * 100)  # oštećen fajl
+    before = len(backup.list_backups(paths))
+    with pytest.raises(backup.CorruptDatabase):
+        bootstrap(paths)
+    assert len(backup.list_backups(paths)) == before  # dobre kopije su netaknute
+    used = backup.recover(paths, now=start + timedelta(days=6))
+    assert used is not None
+    assert any(p.name.startswith("etapa-ostecena-") for p in paths.data_dir.iterdir())
+    db = bootstrap(paths)
+    with db.session() as s:
+        assert [p.name for p in projects_svc.list_projects(s)] == ["Važan projekat"]
+    db.dispose()
+
+
+def test_data_folder_with_special_characters(tmp_path):
+    from app.config import get_paths
+    from app.main import bootstrap
+    from app.services import projects as projects_svc
+
+    folder = tmp_path / "Goran Grujović 100% (posao) #1"
+    db = bootstrap(get_paths(folder))
+    with db.session() as s:
+        projects_svc.create(s, name="Ž")
+        s.commit()
+    db.dispose()
+    db = bootstrap(get_paths(folder))  # drugi start: kopija + migracije
+    with db.session() as s:
+        assert [p.name for p in projects_svc.list_projects(s)] == ["Ž"]
+    db.dispose()

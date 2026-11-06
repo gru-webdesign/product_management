@@ -170,7 +170,9 @@ def test_milestone_move_and_undated_scheduling(gantt):
     w.ctx.run(lambda s: task_service.set_dates(s, task_service.get(s, tid), None, None))
     assert tid not in view.chart.bars
     view._schedule_undated(tid, date.today())
-    assert get(w, tid) == (date.today(), date.today() + timedelta(days=2))
+    start, due = get(w, tid)
+    # UAT zavisi od razvoja: postavlja se posle prethodnika, a trajanje ostaje 3 dana
+    assert start >= date.today() and due - start == timedelta(days=2)
     assert tid in view.chart.bars
 
 

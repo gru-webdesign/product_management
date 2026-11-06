@@ -57,7 +57,7 @@ share_worker/          Cloudflare Worker (src/index.js) + Node testovi + README 
 installer/             etapa.spec (PyInstaller), setup.iss (Inno Setup), icon.ico, launch.py
 scripts/               seed_demo.py, screenshots.py, build.ps1
 .github/workflows/     build-installer.yml: Windows instaler na GitHub-u (ručno ili tag v*)
-tests/                 146 testova (servisi + UI preko pytest-qt, bez prozora)
+tests/                 161 test (servisi + UI preko pytest-qt, bez prozora)
 ```
 
 ## Pravila koda
@@ -92,6 +92,14 @@ tests/                 146 testova (servisi + UI preko pytest-qt, bez prozora)
   direktno u paintEvent-u (skupo na Windows-u i HiDPI ekranima).
 - MainWindow pri aktivaciji proverava spoljne izmene baze (`check_external_changes`), a
   `etapa.lock` u folderu podataka govori seed_demo-u da je aplikacija otvorena.
+- Bezbednost deljenja: kolačić posle PIN-a je HMAC (tajna u settings `share.cookie_secret`),
+  komentar samo kao `application/json`, server zatvara spore veze (timeout 15 s); Worker isto +
+  10 pogrešnih PIN-ova po linku u 10 min. Izvoz CSV/XLSX ne pravi formule od teksta.
+- Kopije: oštećena baza se ne kopira (`backup.check`), čuva se 10 poslednjih + po jedna dnevno
+  30 dana; `backup.recover` pri startu vraća poslednju ispravnu.
+- Promena datuma poštuje i prethodnike (`dependencies.respect_predecessors`), ne samo naslednike.
+- `tests/test_fuzz_db.py`: nasumične operacije + invarijante baze (ETAPA_FUZZ=N za duže),
+  `tests/test_ui_smoke.py`: svaka akcija menija i dijalog u obe teme.
 - U testovima tema se primenjuje jednom po sesiji (conftest), ne u svakom testu (sporo).
 - Signal teme (`theme.manager().changed`) vezuj za metodu objekta, ne za lambda: lambda nadživi
   obrisan widget → RuntimeError.
@@ -160,6 +168,7 @@ v1.1 (verzija 1.1.0):
 v1.2 (verzija 1.2.0):
 - [x] Zavisnosti već pri pravljenju zadatka; uvoz zadataka iz Excel-a (.xlsx/.xls/.csv, Ctrl+Shift+I,
   pregled pre upisa, šablon), dugme za uvoz na praznom ekranu; GitHub Actions pravi instaler
+- [x] 1.2.1: provera bezbednosti i baze (vidi pravila), oporavak oštećene baze, putanje sa %
 
 Šta korisnik treba sam da uradi (traži njegov nalog/računar):
 - instaler: tag `v<verzija>` na GitHub-u (Actions ga pravi i kači na Release) ili lokalno

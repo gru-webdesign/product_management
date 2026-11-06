@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 from pathlib import Path
 
 from sqlalchemy.orm import Session
@@ -14,6 +15,26 @@ from app.services import tasks as task_service
 from app.services.money import from_minor
 
 DELIMITER = ";"
+_NUMBER = re.compile(r"^-?\d[\d.,]*$")
+
+
+def safe_cell(value):
+    """Tekst koji počinje sa = + - @ Excel bi izvršio kao formulu; dodaje se apostrof.
+
+    Brojevi (i negativni) ostaju brojevi.
+    """
+    if isinstance(value, str) and value[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        if not _NUMBER.match(value):
+            return "'" + value
+    return value
+
+
+class _SafeWriter:
+    def __init__(self, buf: io.StringIO) -> None:
+        self._w = csv.writer(buf, delimiter=DELIMITER, lineterminator="\r\n")
+
+    def writerow(self, row) -> None:
+        self._w.writerow([safe_cell(v) for v in row])
 
 
 def _d(value) -> str:
@@ -29,7 +50,7 @@ def _n(value) -> str:
 
 def tasks_csv(session: Session, project_id: str) -> str:
     buf = io.StringIO()
-    w = csv.writer(buf, delimiter=DELIMITER, lineterminator="\r\n")
+    w = _SafeWriter(buf)
     w.writerow(
         [
             "Nivo",
@@ -74,7 +95,7 @@ def tasks_csv(session: Session, project_id: str) -> str:
 
 def costs_csv(session: Session, project_id: str) -> str:
     buf = io.StringIO()
-    w = csv.writer(buf, delimiter=DELIMITER, lineterminator="\r\n")
+    w = _SafeWriter(buf)
     base = budget_service.base_currency(session)
     w.writerow(
         [

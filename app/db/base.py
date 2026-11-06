@@ -104,6 +104,7 @@ def alembic_config(db_url: str):
     from alembic.config import Config
 
     cfg = Config()
-    cfg.set_main_option("script_location", str(MIGRATIONS_DIR))
-    cfg.set_main_option("sqlalchemy.url", db_url)
+    # ConfigParser tumači % kao interpolaciju (npr. folder „Projekti 100%“)
+    cfg.set_main_option("script_location", str(MIGRATIONS_DIR).replace("%", "%%"))
+    cfg.set_main_option("sqlalchemy.url", db_url.replace("%", "%%"))
     return cfg

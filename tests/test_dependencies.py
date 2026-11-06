@@ -105,3 +105,24 @@ def test_remove(session, chain):
     dep = a.successors[0]
     deps.remove(session, dep)
     assert len(deps.for_project(session, p.id)) == 1
+
+
+def test_successor_cannot_be_moved_before_predecessor(session):
+    from datetime import date, timedelta
+
+    from app.services import dependencies, projects, tasks
+
+    p = projects.create(session, name="P")
+    a = tasks.create(
+        session, p.id, title="A", start_date=date(2026, 3, 2), due_date=date(2026, 3, 6)
+    )
+    b = tasks.create(
+        session, p.id, title="B", start_date=date(2026, 3, 9), due_date=date(2026, 3, 10)
+    )
+    dependencies.add(session, a, b)
+    tasks.set_dates(session, b, date(2026, 3, 1), date(2026, 3, 2))  # pokušaj pre A
+    assert (b.start_date, b.due_date) == (date(2026, 3, 7), date(2026, 3, 8))
+    tasks.move_by_days(session, a, -3)  # prethodnik nazad: naslednik ostaje gde je
+    assert b.start_date == date(2026, 3, 7)
+    tasks.update(session, b, start_date=date(2026, 3, 3), due_date=date(2026, 3, 3) + timedelta(1))
+    assert b.start_date == date(2026, 3, 4)  # A se sada završava 3.3.

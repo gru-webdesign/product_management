@@ -31,6 +31,12 @@ def parse_version(text: str) -> tuple[int, ...]:
     return tuple(int(n) for n in nums[:3]) or (0,)
 
 
+def _safe_url(url) -> str:
+    """Otvara se samo stranica ovog projekta na GitHub-u, nikad proizvoljna adresa iz odgovora."""
+    url = str(url or "")
+    return url if url.startswith(RELEASES_URL.rsplit("/releases", 1)[0] + "/") else RELEASES_URL
+
+
 def check(client: httpx.Client | None = None, timeout: float = 8.0) -> UpdateInfo | None:
     """Poslednje izdanje ili None ako izdanja još nema. Mrežne greške se prosleđuju."""
     own = client is None
@@ -46,6 +52,6 @@ def check(client: httpx.Client | None = None, timeout: float = 8.0) -> UpdateInf
             client.close()
     return UpdateInfo(
         latest=str(data.get("tag_name") or data.get("name") or "0"),
-        url=str(data.get("html_url") or RELEASES_URL),
+        url=_safe_url(data.get("html_url")),
         notes=str(data.get("body") or "").strip(),
     )

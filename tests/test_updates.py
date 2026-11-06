@@ -21,11 +21,20 @@ def test_parse_version():
 
 
 def test_check_newer_and_same():
-    info = updates.check(_client(200, {"tag_name": "v99.0.0", "html_url": "https://x/r"}))
-    assert info.newer and info.url == "https://x/r"
+    url = updates.RELEASES_URL + "/tag/v99.0.0"
+    info = updates.check(_client(200, {"tag_name": "v99.0.0", "html_url": url}))
+    assert info.newer and info.url == url
     same = updates.check(_client(200, {"tag_name": f"v{__version__}"}))
     assert not same.newer
 
 
 def test_check_no_releases():
     assert updates.check(_client(404)) is None
+
+
+def test_update_link_is_always_this_repository():
+    from app.services import updates
+
+    assert updates._safe_url("https://evil.example/x") == updates.RELEASES_URL
+    ok = updates.RELEASES_URL + "/tag/v9.0.0"
+    assert updates._safe_url(ok) == ok

@@ -150,6 +150,18 @@ def shift(session: Session, task: Task, days: int) -> None:
         )
 
 
+def respect_predecessors(session: Session, task: Task) -> int:
+    """Ako je zadatak pomeren pre nego što prethodnici dozvoljavaju, vrati ga unapred.
+
+    Vraća za koliko dana je pomeren (0 ako je sve u redu). Trajanje zadatka ostaje isto.
+    """
+    session.flush()
+    incoming = session.scalars(select(TaskDependency).where(TaskDependency.successor_id == task.id))
+    days = max((required_shift(d, d.predecessor, task) for d in incoming), default=0)
+    shift(session, task, days)
+    return days
+
+
 def propagate(session: Session, task: Task, _depth: int = 0) -> list[Task]:
     """Pomera naslednike koji krše zavisnosti, rekurzivno. Vraća pomerene zadatke."""
     if _depth > 500:  # zaštita; krugovi su ionako zabranjeni pri dodavanju

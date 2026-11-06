@@ -176,9 +176,29 @@ function cookieValue(request, name) {
   return "";
 }
 
-function unlocked(request, snap, token) {
+// Kolačić posle PIN-a: HMAC(ADMIN_KEY, token:pin_hash). Ne otkriva heš PIN-a (4 cifre bi se
+// lako pogodile iz heša), a promena PIN-a ga poništava.
+async function sessionValue(env, token, pinHash) {
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(env.ADMIN_KEY || ""), { name: "HMAC", hash: "SHA-256" },
+    false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${token}:${pinHash}`));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function unlocked(request, env, snap, token) {
   if (!snap.pin_hash) return true;
-  return timingSafeEqual(cookieValue(request, `etapa_${token}`), snap.pin_hash);
+  const expected = await sessionValue(env, token, snap.pin_hash);
+  return timingSafeEqual(cookieValue(request, `etapa_${token}`), expected);
+}
+
+// Pogrešni PIN-ovi: najviše PIN_TRIES po linku u 10 minuta (bez obzira na adresu), da se
+// kratak PIN ne može pogoditi isprobavanjem.
+const PIN_TRIES = 10;
+async function pinBlocked(env, token) {
+  const slot = Math.floor(Date.now() / 600000);
+  const key = `pin:${token}:${slot}`;
+  return { key, count: parseInt((await env.SHARES.get(key)) || "0", 10) };
 }
 
 // --- stranica i PIN ------------------------------------------------------------------------------
@@ -186,7 +206,7 @@ function unlocked(request, snap, token) {
 async function viewPage(request, env, token) {
   const snap = await getSnapshot(env, token);
   if (!snap) return notFound();
-  if (!unlocked(request, snap, token)) return pinPage(token, false);
+  if (!(await unlocked(request, env, snap, token))) return pinPage(token, false);
   return html(snap.html);
 }
 
@@ -201,15 +221,23 @@ function pinPage(token, wrong) {
 async function unlock(request, env, token) {
   const snap = await getSnapshot(env, token);
   if (!snap) return notFound();
+  const tries = await pinBlocked(env, token);
+  if (tries.count >= PIN_TRIES) {
+    return html(simplePage("Previše pokušaja", "Pokušaj ponovo za 10 minuta."), 429);
+  }
   const form = await request.formData().catch(() => null);
   const pin = form ? String(form.get("pin") || "") : "";
   const hash = await sha256Hex(`${token}:${pin}`);
-  if (!snap.pin_hash || !timingSafeEqual(hash, snap.pin_hash)) return pinPage(token, true);
+  if (!snap.pin_hash || !timingSafeEqual(hash, snap.pin_hash)) {
+    await env.SHARES.put(tries.key, String(tries.count + 1), { expirationTtl: 1200 });
+    return pinPage(token, true);
+  }
+  const session = await sessionValue(env, token, snap.pin_hash);
   return new Response(null, {
     status: 303,
     headers: {
       location: `/p/${token}`,
-      "set-cookie": `etapa_${token}=${hash}; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax`,
+      "set-cookie": `etapa_${token}=${session}; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Lax`,
     },
   });
 }
@@ -233,7 +261,7 @@ async function listComments(env, token) {
 async function publicComments(request, env, token) {
   const snap = await getSnapshot(env, token);
   if (!snap) return json({ error: "Link nije dostupan." }, 404);
-  if (!unlocked(request, snap, token)) return json({ error: "Potreban je PIN." }, 403);
+  if (!(await unlocked(request, env, snap, token))) return json({ error: "Potreban je PIN." }, 403);
   const comments = (await listComments(env, token)).map(({ author, text, task_id, posted_at }) =>
     ({ author, text, task_id, posted_at }));
   return json({ comments });
@@ -242,7 +270,7 @@ async function publicComments(request, env, token) {
 async function postComment(request, env, token) {
   const snap = await getSnapshot(env, token);
   if (!snap) return json({ error: "Link nije dostupan." }, 404);
-  if (!unlocked(request, snap, token)) return json({ error: "Potreban je PIN." }, 403);
+  if (!(await unlocked(request, env, snap, token))) return json({ error: "Potreban je PIN." }, 403);
 
   const ip = request.headers.get("cf-connecting-ip") || "nepoznat";
   const minute = Math.floor(Date.now() / 60000);
@@ -251,6 +279,9 @@ async function postComment(request, env, token) {
   if (count >= RATE_PER_MINUTE) {
     return json({ error: "Previše komentara za kratko vreme, pokušaj ponovo za minut." }, 429);
   }
+
+  const ctype = (request.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+  if (ctype !== "application/json") return json({ error: "Neispravan zahtev." }, 415);
 
   let body;
   try {

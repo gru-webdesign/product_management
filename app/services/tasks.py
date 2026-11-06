@@ -177,6 +177,7 @@ def update(session: Session, task: Task, **changes) -> list[str]:
         changed.append("tags")
     session.flush()
     if {"start_date", "due_date"} & set(changed):
+        dependencies.respect_predecessors(session, task)
         dependencies.propagate(session, task)
     return changed
 
@@ -188,6 +189,7 @@ def set_dates(session: Session, task: Task, start: date | None, due: date | None
         session, task, {"start_date": start, "due_date": due}, "task", task.project_id, EDITABLE
     )
     session.flush()
+    dependencies.respect_predecessors(session, task)
     return dependencies.propagate(session, task)
 
 
