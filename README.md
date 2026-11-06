@@ -55,6 +55,13 @@ Demo baza je u folderu `.data/` i ne dira tvoje prave podatke.
 
 ## Instaler (Etapa-Setup.exe)
 
+Najlakše: gotov instaler je na stranici
+[Releases](https://github.com/gru-webdesign/product_management/releases). Pravi ga GitHub
+(Actions → „Windows instaler“) za svaki tag `v*`, a može i ručno dugmetom *Run workflow*.
+Aplikacija kreće prazna, bez demo podataka; podaci su u `%APPDATA%\Etapa`.
+
+Lokalno, na Windows-u:
+
 Jednom instaliraj [Inno Setup 6](https://jrsoftware.org/isdl.php), pa:
 
 ```powershell
@@ -62,7 +69,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 ```
 
 Skripta pokrene testove, spakuje aplikaciju (PyInstaller → `dist\Etapa\Etapa.exe`), proveri da
-se `.exe` pokreće, i napravi instaler `installer\Output\Etapa-Setup-1.1.0.exe`. Instaler ne
+se `.exe` pokreće, i napravi instaler `installer\Output\Etapa-Setup-1.2.0.exe`. Instaler ne
 traži administratorska prava; deinstalacija ne briše podatke.
 
 ## Deljenje linkom

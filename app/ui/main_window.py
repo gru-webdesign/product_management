@@ -37,7 +37,7 @@ def _fmt(d) -> str:
 
 
 class EmptyState(QWidget):
-    def __init__(self, on_create, parent=None) -> None:
+    def __init__(self, on_create, parent=None, on_import=None) -> None:
         super().__init__(parent)
         from app.ui.widgets.card import Card
         from app.ui.widgets.kpi import IconChip
@@ -52,7 +52,8 @@ class EmptyState(QWidget):
         title = QLabel("Još nema projekata")
         title.setObjectName("EmptyTitle")
         text = QLabel(
-            "Napravi prvi projekat, prazan ili iz šablona, pa dodaj zadatke, rokove i budžet."
+            "Napravi prvi projekat, prazan ili iz šablona, pa dodaj zadatke, rokove i budžet. "
+            "Zadatke koje već imaš u tabeli možeš da uvezeš iz Excel-a."
         )
         text.setObjectName("EmptyText")
         text.setWordWrap(True)
@@ -64,7 +65,16 @@ class EmptyState(QWidget):
             w.setAlignment(Qt.AlignmentFlag.AlignCenter)
             card.body.addWidget(w)
         card.body.addSpacing(8)
-        card.body.addWidget(button, 0, Qt.AlignmentFlag.AlignCenter)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        row.addWidget(button)
+        if on_import is not None:
+            self.import_button = QPushButton("Uvezi iz Excel-a")
+            self.import_button.setIcon(icons.icon("upload"))
+            self.import_button.clicked.connect(on_import)
+            row.addWidget(self.import_button)
+        row.addStretch(1)
+        card.body.addLayout(row)
         lay.addWidget(card, 0, Qt.AlignmentFlag.AlignCenter)
         lay.addStretch(2)
 
@@ -210,7 +220,7 @@ class MainWindow(QMainWindow):
         root.addWidget(self.sidebar)
 
         self.stack = QStackedWidget()
-        self.empty = EmptyState(self.sidebar.new_project)
+        self.empty = EmptyState(self.sidebar.new_project, on_import=self.import_tasks)
         self.stack.addWidget(self.empty)
 
         project_page = QWidget()
@@ -317,6 +327,7 @@ class MainWindow(QMainWindow):
         self._action(file_menu, "Novi projekat", "Ctrl+Shift+N", self.sidebar.new_project)
         self._action(file_menu, "Novi zadatak", "Ctrl+N", self.new_task)
         file_menu.addSeparator()
+        self._action(file_menu, "Uvezi zadatke iz Excel-a…", "Ctrl+Shift+I", self.import_tasks)
         export_menu = file_menu.addMenu(icons.icon("download"), "Izvezi")
         self._action(export_menu, "PDF izveštaj…", "Ctrl+P", self.export_pdf)
         self._action(export_menu, "Projekat u Excel…", "Ctrl+Shift+X", self.export_xlsx)
@@ -475,6 +486,7 @@ class MainWindow(QMainWindow):
             ("Ctrl+0", "Pregled svih projekata"),
             ("Ctrl+P", "PDF izveštaj"),
             ("Ctrl+Shift+X", "Izvoz u Excel"),
+            ("Ctrl+Shift+I", "Uvoz zadataka iz Excel-a"),
             ("Ctrl+E", "Izvoz u CSV"),
             ("Ctrl+Shift+S", "Podeli linkom"),
             ("Ctrl+,", "Podešavanja"),
@@ -527,6 +539,12 @@ class MainWindow(QMainWindow):
         from app.ui.dialogs.settings_dialog import SettingsDialog
 
         SettingsDialog(self.ctx, self).exec()
+
+    def import_tasks(self) -> None:
+        from app.ui.dialogs.import_dialog import import_dialog
+
+        if import_dialog(self.ctx, self):
+            self.sidebar.reload()
 
     def open_lists(self, name: str = "client") -> None:
         from app.ui.dialogs.settings_dialog import SettingsDialog

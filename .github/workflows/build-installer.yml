@@ -1,0 +1,68 @@
+# Pravi Windows instaler (Etapa-Setup-<verzija>.exe) na GitHub-ovom Windows računaru.
+# Pokreće se: ručno (Actions → Windows instaler → Run workflow) ili kad se objavi tag v1.2.0.
+# Za tag se instaler kači na GitHub Release, odakle ga preuzima i provera nove verzije u aplikaciji.
+name: Windows instaler
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Zavisnosti
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" pyinstaller
+
+      - name: Testovi
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest -q
+
+      - name: PyInstaller
+        run: python -m PyInstaller --noconfirm --clean installer/etapa.spec
+
+      - name: Provera Etapa.exe (prazna baza)
+        shell: pwsh
+        run: |
+          $env:ETAPA_DATA_DIR = Join-Path $env:RUNNER_TEMP "etapa-smoke"
+          $env:QT_QPA_PLATFORM = "offscreen"
+          $p = Start-Process -FilePath "dist\Etapa\Etapa.exe" -ArgumentList "--smoke-test" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "Etapa.exe se nije pokrenuo (kod $($p.ExitCode))" }
+
+      - name: Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $version = (Select-String -Path "app\__init__.py" -Pattern '__version__ = "(.+)"').Matches[0].Groups[1].Value
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$version" "installer\setup.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup nije uspeo" }
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Etapa-Setup-${{ env.VERSION }}
+          path: installer/Output/Etapa-Setup-*.exe
+
+      - name: GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Etapa ${{ env.VERSION }}
+          files: installer/Output/Etapa-Setup-*.exe
+          body: |
+            Instaler za Windows (bez administratorskih prava). Preuzmi Etapa-Setup-${{ env.VERSION }}.exe i pokreni.
+            Podaci su u %APPDATA%\Etapa i ostaju i posle deinstalacije.

@@ -30,7 +30,8 @@ app/
   db/migrations/       Alembic (versions/ se ne lintuje)
   services/            poslovna logika BEZ Qt-a: projects, tasks, dependencies, milestones,
                        gantt_math, budget, sharing, activity, backup, defaults, money, export_csv,
-                       export_xlsx, timetracking, dashboard, templates, template_library
+                       export_xlsx, importer (uvoz iz Excel/CSV + šablon), timetracking,
+                       dashboard, templates, template_library
                        (8 ugrađenih šablona po fazama), registry (rizici, ljudi, dokumenta,
                        odluke), suggestions (predlozi za padajuće liste), reminders, updates
   share/               snapshot (šta se deli), render + templates/share.html, local_server
@@ -48,14 +49,15 @@ app/
                        gantt/ (chart, items, model; load_chart_data koristi i PDF)
     dialogs/           project (sa šablonom), task (7 tabova, i Koraci i Vreme), milestone,
                        cost, budget, share, settings (+ lists_tab: Liste predloga), restore, templates,
-                       registry_dialogs (rizik, osoba, dokument, odluka)
+                       registry_dialogs (rizik, osoba, dokument, odluka), import_dialog
     widgets/           card (kartica sa senkom), kpi (brojka + ikonica), fields (SuggestCombo:
                        lista predloga + proizvoljan unos), paint
                        (bedževi, trake), comments_panel, timer_widget (tajmer u statusnoj traci)
 share_worker/          Cloudflare Worker (src/index.js) + Node testovi + README za postavljanje
 installer/             etapa.spec (PyInstaller), setup.iss (Inno Setup), icon.ico, launch.py
 scripts/               seed_demo.py, screenshots.py, build.ps1
-tests/                 141 test (servisi + UI preko pytest-qt, bez prozora)
+.github/workflows/     build-installer.yml: Windows instaler na GitHub-u (ručno ili tag v*)
+tests/                 146 testova (servisi + UI preko pytest-qt, bez prozora)
 ```
 
 ## Pravila koda
@@ -155,8 +157,13 @@ v1.1 (verzija 1.1.0):
 - [x] Performanse: keš senki, oznaka kad radi pod debagerom, VS Code task bez debagera;
   osvežavanje posle spoljne izmene baze (seed_demo dok je app otvoren)
 
+v1.2 (verzija 1.2.0):
+- [x] Zavisnosti već pri pravljenju zadatka; uvoz zadataka iz Excel-a (.xlsx/.xls/.csv, Ctrl+Shift+I,
+  pregled pre upisa, šablon), dugme za uvoz na praznom ekranu; GitHub Actions pravi instaler
+
 Šta korisnik treba sam da uradi (traži njegov nalog/računar):
-- `scripts\build.ps1` na Windows-u (treba Inno Setup 6) → instaler
+- instaler: tag `v<verzija>` na GitHub-u (Actions ga pravi i kači na Release) ili lokalno
+  `scripts\build.ps1` (treba Inno Setup 6)
 - (samo za deljenje preko interneta) postavljanje Worker-a po `share_worker/README.md`
 
 Odloženo (nije u v1.1): prilozi/slike računa, engleski jezik.
