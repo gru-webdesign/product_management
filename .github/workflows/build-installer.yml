@@ -1,6 +1,7 @@
 # Pravi Windows instaler (Etapa-Setup-<verzija>.exe) na GitHub-ovom Windows računaru.
-# Pokreće se: ručno (Actions → Windows instaler → Run workflow) ili kad se objavi tag v1.2.0.
-# Za tag se instaler kači na GitHub Release, odakle ga preuzima i provera nove verzije u aplikaciji.
+# Pokreće se: ručno (Actions → Windows instaler → Run workflow) ili kad se objavi tag v*.
+# Instaler se kači na GitHub Release v<verzija> (iz app/__init__.py), odakle ga preuzima i
+# provera nove verzije u aplikaciji.
 name: Windows instaler
 
 on:
@@ -57,10 +58,12 @@ jobs:
           name: Etapa-Setup-${{ env.VERSION }}
           path: installer/Output/Etapa-Setup-*.exe
 
+      # tag v<verzija> se pravi sam ako ne postoji (i kad je pokrenuto ručno)
       - name: GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
           name: Etapa ${{ env.VERSION }}
           files: installer/Output/Etapa-Setup-*.exe
           body: |
