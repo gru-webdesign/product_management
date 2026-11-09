@@ -50,14 +50,15 @@ app/
     dialogs/           project (sa šablonom), task (7 tabova, i Koraci i Vreme), milestone,
                        cost, budget, share, settings (+ lists_tab: Liste predloga), restore, templates,
                        registry_dialogs (rizik, osoba, dokument, odluka), import_dialog
-    widgets/           card (kartica sa senkom), kpi (brojka + ikonica), fields (SuggestCombo:
+    widgets/           card (kartica sa senkom), kpi (brojka + ikonica, KpiRow se prelama), flow
+                       (FlowLayout za trake), elided (naslov sa „…“), wrapfix, fields (SuggestCombo:
                        lista predloga + proizvoljan unos), paint
                        (bedževi, trake), comments_panel, timer_widget (tajmer u statusnoj traci)
 share_worker/          Cloudflare Worker (src/index.js) + Node testovi + README za postavljanje
 installer/             etapa.spec (PyInstaller), setup.iss (Inno Setup), icon.ico, launch.py
 scripts/               seed_demo.py, screenshots.py, build.ps1
 .github/workflows/     build-installer.yml: Windows instaler na GitHub-u (ručno ili tag v*)
-tests/                 161 test (servisi + UI preko pytest-qt, bez prozora)
+tests/                 167 testova (servisi + UI preko pytest-qt, bez prozora)
 ```
 
 ## Pravila koda
@@ -100,6 +101,10 @@ tests/                 161 test (servisi + UI preko pytest-qt, bez prozora)
 - Promena datuma poštuje i prethodnike (`dependencies.respect_predecessors`), ne samo naslednike.
 - `tests/test_fuzz_db.py`: nasumične operacije + invarijante baze (ETAPA_FUZZ=N za duže),
   `tests/test_ui_smoke.py`: svaka akcija menija i dijalog u obe teme.
+- Isečen tekst: prelomljene labele i dijalozi se sami prilagode (`widgets/wrapfix.py`, poziva
+  `theme.apply`), trake su FlowLayout, prikazi su u QScrollArea (prozor min ~820×390). Bez
+  `setFixedHeight` za tekstualna polja (QSS min-height 72px). Novi ekran proveri sa
+  `tests/clipping.py` (`tests/test_ui_clipping.py`, `tests/test_scenario.py`).
 - U testovima tema se primenjuje jednom po sesiji (conftest), ne u svakom testu (sporo).
 - Signal teme (`theme.manager().changed`) vezuj za metodu objekta, ne za lambda: lambda nadživi
   obrisan widget → RuntimeError.
@@ -169,6 +174,8 @@ v1.2 (verzija 1.2.0):
 - [x] Zavisnosti već pri pravljenju zadatka; uvoz zadataka iz Excel-a (.xlsx/.xls/.csv, Ctrl+Shift+I,
   pregled pre upisa, šablon), dugme za uvoz na praznom ekranu; GitHub Actions pravi instaler
 - [x] 1.2.1: provera bezbednosti i baze (vidi pravila), oporavak oštećene baze, putanje sa %
+- [x] 1.2.2: bez isečenog teksta (prazan ekran, polja za opis, budžet, tabovi dijaloga, uzak
+  prozor), detektor isečenog teksta i scenario test kroz celu aplikaciju
 
 Šta korisnik treba sam da uradi (traži njegov nalog/računar):
 - instaler: tag `v<verzija>` na GitHub-u (Actions ga pravi i kači na Release) ili lokalno

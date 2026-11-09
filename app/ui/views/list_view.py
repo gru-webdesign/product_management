@@ -9,7 +9,6 @@ from PySide6.QtGui import QAction, QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QHBoxLayout,
     QHeaderView,
     QLabel,
     QMenu,
@@ -28,6 +27,7 @@ from app.ui import icons, theme
 from app.ui.dialogs.task_dialog import open_new_task, open_task
 from app.ui.views.base import ProjectView
 from app.ui.widgets.card import Card
+from app.ui.widgets.flow import FlowLayout
 from app.ui.widgets.paint import PillDelegate, ProgressDelegate
 
 ROLE_ID = Qt.ItemDataRole.UserRole
@@ -73,7 +73,7 @@ class ListView(ProjectView):
         lay.setContentsMargins(0, 10, 0, 0)
         lay.setSpacing(8)
 
-        bar = QHBoxLayout()
+        bar = FlowLayout()  # na uskom prozoru prelama se u novi red
         bar.setContentsMargins(8, 0, 8, 0)
         bar.setSpacing(8)
         self.status_filter = QComboBox()
@@ -128,8 +128,11 @@ class ListView(ProjectView):
         self.tree.setItemDelegateForColumn(C_PRIO, PillDelegate(self.tree))
         self.tree.setItemDelegateForColumn(C_PROGRESS, ProgressDelegate(self.tree))
         header = self.tree.header()
-        header.setStretchLastSection(False)
-        header.setSectionResizeMode(C_TITLE, QHeaderView.ResizeMode.Stretch)
+        # Naziv uvek ima dovoljno mesta (na uskom prozoru tabela se pomera levo-desno),
+        # a poslednja kolona popuni ostatak širine.
+        header.setStretchLastSection(True)
+        header.setSectionResizeMode(C_TITLE, QHeaderView.ResizeMode.Interactive)
+        self.tree.setColumnWidth(C_TITLE, 300)
         for col, width in (
             (C_STATUS, 130),
             (C_PRIO, 105),
@@ -156,6 +159,7 @@ class ListView(ProjectView):
         lay.addWidget(self.card, 1)
 
         self.empty = QLabel("Nema zadataka. Dodaj prvi dugmetom „Zadatak“ ili Ctrl+N.")
+        self.empty.setWordWrap(True)
         self.empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.empty.setProperty("muted", True)
         self.empty.hide()

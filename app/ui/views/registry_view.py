@@ -9,7 +9,6 @@ from PySide6.QtGui import QColor, QDesktopServices, QGuiApplication
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
-    QHBoxLayout,
     QHeaderView,
     QLabel,
     QMenu,
@@ -35,6 +34,7 @@ from app.ui.dialogs.registry_dialogs import (
 )
 from app.ui.views.base import ProjectView
 from app.ui.widgets.card import Card
+from app.ui.widgets.flow import FlowLayout
 from app.ui.widgets.paint import PillDelegate
 
 ROLE_ID = Qt.ItemDataRole.UserRole
@@ -153,7 +153,7 @@ class RegistryView(ProjectView):
         lay.setContentsMargins(0, 10, 0, 0)
         lay.setSpacing(6)
 
-        bar = QHBoxLayout()
+        bar = FlowLayout()  # na uskom prozoru prelama se u novi red
         bar.setContentsMargins(8, 0, 8, 4)
         bar.setSpacing(6)
         self.group = QButtonGroup(self)
@@ -197,9 +197,11 @@ class RegistryView(ProjectView):
             for col in sec.pills:
                 tree.setItemDelegateForColumn(col, PillDelegate(tree))
             header = tree.header()
-            header.setStretchLastSection(False)
-            stretch = 0 if sec.key != "decision" else 1
-            header.setSectionResizeMode(stretch, QHeaderView.ResizeMode.Stretch)
+            # glavna kolona (naziv) dobija dovoljno mesta, poslednja popuni ostatak širine
+            header.setStretchLastSection(True)
+            main = 0 if sec.key != "decision" else 1
+            header.setSectionResizeMode(main, QHeaderView.ResizeMode.Interactive)
+            tree.setColumnWidth(main, 280)
             for col, width in sec.widths.items():
                 header.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
                 tree.setColumnWidth(col, width)

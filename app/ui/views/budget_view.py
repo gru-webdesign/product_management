@@ -9,7 +9,6 @@ from PySide6.QtCore import QDateTime, QMargins, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtWidgets import (
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -33,7 +32,7 @@ from app.ui.dialogs.cost_dialog import edit_money_entry
 from app.ui.sidebar import color_dot
 from app.ui.views.base import ProjectView
 from app.ui.widgets.card import Card
-from app.ui.widgets.kpi import KpiCard
+from app.ui.widgets.kpi import KpiCard, KpiRow
 from app.ui.widgets.paint import ProgressDelegate
 
 ROLE_ID = Qt.ItemDataRole.UserRole
@@ -189,18 +188,15 @@ class BudgetView(ProjectView):
         bar.addWidget(self.base_label)
         root.addLayout(bar)
 
-        kpis = QGridLayout()
-        kpis.setSpacing(2)
         self.k_budget = KpiCard("Budžet", "wallet", small=True)
         self.k_spent = KpiCard("Potrošeno", "coins", "warning", small=True)
         self.k_left = KpiCard("Preostalo", "hourglass", small=True)
         self.k_income = KpiCard("Prihod", "download", "success", small=True)
         self.k_profit = KpiCard("Zarada", "chart", "success", small=True)
-        for i, k in enumerate(
-            (self.k_budget, self.k_spent, self.k_left, self.k_income, self.k_profit)
-        ):
-            kpis.addWidget(k, 0, i)
-        root.addLayout(kpis)
+        self.kpi_row = KpiRow(
+            [self.k_budget, self.k_spent, self.k_left, self.k_income, self.k_profit]
+        )
+        root.addWidget(self.kpi_row)
 
         self.banner = Banner()
         banner_wrap = QHBoxLayout()
@@ -330,6 +326,7 @@ class BudgetView(ProjectView):
             labor,
             t.success if summ.profit > 0 else (t.danger if summ.profit < 0 else None),
         )
+        self.kpi_row.refit()
         self.banner.set(summ.warnings())
 
         self.categories.clear()

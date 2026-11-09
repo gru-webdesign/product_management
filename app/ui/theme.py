@@ -198,6 +198,9 @@ def apply(app: QApplication, mode: str = "system") -> Tokens:
     t = m.resolve(mode)
     m.tokens = t
     app.setStyle("Fusion")
+    from app.ui.widgets import wrapfix
+
+    wrapfix.install(app)
     app.setPalette(_palette(t))
     app.setStyleSheet(stylesheet(t))
     m.changed.emit()
@@ -296,6 +299,7 @@ QToolButton:checked {{ background: {t.accent_soft}; color: {t.accent}; }}
 QLineEdit, QPlainTextEdit, QTextEdit, QSpinBox, QDoubleSpinBox, QDateEdit, QComboBox {{
     background: {t.surface}; border: 1px solid {t.border_strong}; border-radius: 8px;
     padding: 5px 9px; selection-background-color: {t.accent}; min-height: 20px; }}
+QPlainTextEdit, QTextEdit {{ min-height: 72px; }}
 QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus, QSpinBox:focus,
 QDoubleSpinBox:focus, QDateEdit:focus, QComboBox:focus {{ border: 1px solid {t.accent}; }}
 QLineEdit:disabled, QDateEdit:disabled, QDoubleSpinBox:disabled {{ color: {t.faint};

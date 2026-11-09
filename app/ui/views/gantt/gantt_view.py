@@ -8,7 +8,6 @@ from PySide6.QtCore import QPoint, Qt
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
-    QHBoxLayout,
     QLabel,
     QMenu,
     QPushButton,
@@ -30,6 +29,7 @@ from app.ui.views.base import ProjectView
 from app.ui.views.gantt.chart import GanttChart
 from app.ui.views.gantt.model import DepData, MilestoneData, RowData
 from app.ui.widgets.card import Card
+from app.ui.widgets.flow import FlowLayout
 
 ZOOM_ORDER = list(ZOOMS)  # day, week, month
 
@@ -82,7 +82,7 @@ class GanttView(ProjectView):
         lay.setContentsMargins(0, 10, 0, 0)
         lay.setSpacing(8)
 
-        bar = QHBoxLayout()
+        bar = FlowLayout()  # na uskom prozoru prelama se u novi red
         bar.setSpacing(6)
         self.zoom_group = QButtonGroup(self)
         self.zoom_buttons: dict[str, QToolButton] = {}

@@ -115,6 +115,9 @@ class TaskDialog(QDialog):
         root.addWidget(self.title_edit)
 
         self.tabs = QTabWidget()
+        # svi tabovi su uvek vidljivi celim nazivom (dijalog se raširi), bez strelica
+        self.tabs.setUsesScrollButtons(False)
+        self.tabs.setElideMode(Qt.TextElideMode.ElideNone)
         self.tabs.addTab(self._details_tab(data, defaults), "Detalji")
         self.tabs.addTab(self._steps_tab(), "Koraci")
         self._render_steps()

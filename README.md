@@ -69,7 +69,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build.ps1
 ```
 
 Skripta pokrene testove, spakuje aplikaciju (PyInstaller → `dist\Etapa\Etapa.exe`), proveri da
-se `.exe` pokreće, i napravi instaler `installer\Output\Etapa-Setup-1.2.1.exe`. Instaler ne
+se `.exe` pokreće, i napravi instaler `installer\Output\Etapa-Setup-1.2.2.exe`. Instaler ne
 traži administratorska prava; deinstalacija ne briše podatke.
 
 ## Deljenje linkom

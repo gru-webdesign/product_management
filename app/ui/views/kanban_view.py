@@ -29,6 +29,7 @@ from app.ui import icons, theme
 from app.ui.dialogs.task_dialog import open_task
 from app.ui.views.base import ProjectView
 from app.ui.widgets.card import paint_card
+from app.ui.widgets.flow import FlowLayout
 from app.ui.widgets.paint import draw_pill, draw_progress
 
 ROLE_ID = Qt.ItemDataRole.UserRole
@@ -235,6 +236,7 @@ class ColumnFrame(QFrame):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(8, 12, 8, 10)
         lay.setSpacing(8)
+        self.setMinimumWidth(168)  # naziv kolone i broj uvek staju (na uskom prozoru skrol)
         head = QHBoxLayout()
         head.setContentsMargins(6, 0, 6, 0)
         head.setSpacing(8)
@@ -265,16 +267,14 @@ class KanbanView(ProjectView):
         lay = QVBoxLayout(self)
         lay.setContentsMargins(0, 10, 0, 0)
         lay.setSpacing(8)
-        bar = QHBoxLayout()
+        bar = FlowLayout()  # na uskom prozoru prelama se u novi red
         bar.setContentsMargins(8, 0, 8, 0)
         self.show_subtasks = QCheckBox("Prikaži podzadatke")
         self.show_subtasks.setChecked(True)
         self.show_subtasks.toggled.connect(lambda _c: self.refresh())
         bar.addWidget(self.show_subtasks)
         bar.addStretch(1)
-        hint = QLabel(
-            "Prevuci karticu u drugu kolonu da promeniš status. Dupli klik otvara zadatak."
-        )
+        hint = QLabel("Prevuci karticu da promeniš status, dupli klik je otvara.")
         hint.setProperty("faint", True)
         bar.addWidget(hint)
         lay.addLayout(bar)

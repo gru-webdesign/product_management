@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QProgressBar,
     QPushButton,
+    QScrollArea,
     QStackedWidget,
     QTabWidget,
     QVBoxLayout,
@@ -90,13 +91,14 @@ class ProjectHeader(QFrame):
         lay.setSpacing(6)
         top = QHBoxLayout()
         top.setSpacing(10)
-        self.title = QLabel()
-        self.title.setTextFormat(Qt.TextFormat.PlainText)  # naziv „<b>x</b>“ ostaje tekst
+        from app.ui.widgets.elided import ElidedLabel
+        from app.ui.widgets.flow import FlowLayout
+
+        self.title = ElidedLabel()  # dug naziv se skrati sa „…“, ceo je u opisu
         self.title.setObjectName("ProjectTitle")
         top.addWidget(self.title, 1)
         lay.addLayout(top)
-        meta = QHBoxLayout()
-        meta.setSpacing(14)
+        meta = FlowLayout(spacing=14, v_spacing=4)  # na uskom prozoru ide u dva reda
         self.client = QLabel()
         self.client.setTextFormat(Qt.TextFormat.PlainText)
         self.client.setProperty("muted", True)
@@ -109,14 +111,14 @@ class ProjectHeader(QFrame):
         self.progress_bar.setTextVisible(False)
         self.progress_text = QLabel()
         self.progress_text.setProperty("muted", True)
-        progress = QHBoxLayout()
+        progress_box = QWidget()
+        progress = QHBoxLayout(progress_box)
+        progress.setContentsMargins(0, 0, 0, 0)
         progress.setSpacing(8)
         progress.addWidget(self.progress_bar)
         progress.addWidget(self.progress_text)
-        for w in (self.client, self.status, self.dates):
+        for w in (self.client, self.status, self.dates, progress_box):
             meta.addWidget(w)
-        meta.addLayout(progress)
-        meta.addStretch(1)
         lay.addLayout(meta)
 
         self.search = QLineEdit()
@@ -124,7 +126,8 @@ class ProjectHeader(QFrame):
         self.search.setPlaceholderText("Pretraži zadatke (Ctrl+F)")
         self.search.addAction(icons.icon("search"), QLineEdit.ActionPosition.LeadingPosition)
         self.search.setClearButtonEnabled(True)
-        self.search.setFixedWidth(260)
+        self.search.setMinimumWidth(170)
+        self.search.setMaximumWidth(260)
         self._debounce = QTimer(self, singleShot=True, interval=200)
         self._debounce.timeout.connect(lambda: ctx.set_search(self.search.text()))
         self.search.textChanged.connect(lambda _t: self._debounce.start())
@@ -177,6 +180,17 @@ class ProjectHeader(QFrame):
         return "  ".join(
             w.text() for w in (self.client, self.status, self.dates, self.progress_text) if w.text()
         )
+
+
+def _scrollable(widget: QWidget) -> QScrollArea:
+    area = QScrollArea()
+    area.setObjectName("ViewScroll")
+    area.setWidgetResizable(True)
+    area.setFrameShape(QFrame.Shape.NoFrame)
+    area.setWidget(widget)
+    area.viewport().setAutoFillBackground(False)
+    widget.setAutoFillBackground(False)
+    return area
 
 
 def _under_debugger() -> bool:
@@ -240,7 +254,9 @@ class MainWindow(QMainWindow):
         self.tabs.tabBar().setDrawBase(False)
         self.views: list[ProjectView] = self._make_views()
         for view in self.views:
-            self.tabs.addTab(view, icons.icon(view.icon_name), view.title)
+            # Prikaz se nikad ne gnječi ispod svoje minimalne veličine (mali ekran, uvećan font):
+            # tada se pojavi traka za pomeranje umesto isečenog sadržaja.
+            self.tabs.addTab(_scrollable(view), icons.icon(view.icon_name), view.title)
         tabs_wrap = QWidget()
         tw = QVBoxLayout(tabs_wrap)
         tw.setContentsMargins(22, 4, 22, 14)

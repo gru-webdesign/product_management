@@ -43,6 +43,9 @@ class SettingsDialog(QDialog):
         root = QVBoxLayout(self)
         root.setContentsMargins(20, 18, 20, 16)
         self.tabs = QTabWidget()
+        # svi tabovi su uvek vidljivi celim nazivom (dijalog se raširi), bez strelica
+        self.tabs.setUsesScrollButtons(False)
+        self.tabs.setElideMode(Qt.TextElideMode.ElideNone)
         self.tabs.addTab(self._general(), "Opšte")
         self.tabs.addTab(self._share(), "Deljenje")
         from app.ui.dialogs.lists_tab import ListsEditor

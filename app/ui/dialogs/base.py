@@ -14,6 +14,20 @@ from PySide6.QtWidgets import (
 from app.ui import theme
 
 
+def fit_to_content(dialog: QDialog) -> None:
+    """Dijalog nikad ne bude manji od onoga što sadržaj traži (veći font, duži iznos).
+
+    Poziva se pri prikazu svakog dijaloga (widgets/wrapfix.py).
+    """
+    layout = dialog.layout()
+    if layout is None:
+        return
+    layout.activate()
+    need = layout.minimumSize()
+    dialog.setMinimumSize(dialog.minimumSize().expandedTo(need))
+    dialog.resize(dialog.size().expandedTo(dialog.sizeHint()).expandedTo(need))
+
+
 class FormDialog(QDialog):
     def __init__(self, title: str, parent: QWidget | None = None, save_text: str = "Sačuvaj"):
         super().__init__(parent)
