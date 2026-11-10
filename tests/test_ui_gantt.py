@@ -186,3 +186,23 @@ def test_cycle_link_rejected_without_crash(gantt, monkeypatch):
     z = task_id(w, "Go-live")
     view._link(z, a)  # Objava → Brief bi napravila krug
     assert shown and "krug" in shown[0]
+
+
+def test_layout_has_no_overlaps(gantt):
+    """Nazivi milestone-a se ne preklapaju, nazivi traka ostaju na grafikonu, prvi prikaz
+    počinje pre posla koji je u toku."""
+    view = gantt[1] if isinstance(gantt, tuple) else gantt.views[2]
+    chart = view.chart
+    view.set_zoom("month")
+    items = sorted(chart.milestone_items, key=lambda i: i.center().x())
+    assert len(items) == 2
+    first, second = items
+    assert first.center().x() + first.SIZE + 6 + first.max_label_w <= second.center().x()
+    right = chart.sceneRect().right()
+    for bar in chart.bars.values():
+        assert bar.label_rect().right() <= right
+    view.set_zoom("day")
+    from datetime import timedelta
+
+    start = chart._initial_date(chart.rows)
+    assert start <= date.today() - timedelta(days=3)

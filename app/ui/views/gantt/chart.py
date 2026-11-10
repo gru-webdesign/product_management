@@ -57,6 +57,7 @@ class GanttChart(QGraphicsView):
         self.deps: list[DepData] = []
         self.bars: dict[str, TaskBarItem] = {}
         self.dep_items: list[DependencyItem] = []
+        self.milestone_items: list[MilestoneItem] = []
         self.zoom = "day"
         self.show_cost = False
         self.scale = TimeScale(date.today(), 60, 38.0)
@@ -120,11 +121,13 @@ class GanttChart(QGraphicsView):
         self.bars.clear()
         self.dep_items.clear()
         height = HEADER_H + (len(rows) + 1) * ROW_H + ROW_H * 2
-        scene.setSceneRect(QRectF(0, 0, self.left_w + self.scale.width + 120, height))
+        scene.setSceneRect(QRectF(0, 0, self.left_w + self.scale.width + 280, height))
 
-        for i, m in enumerate(milestones):
-            scene.addItem(MilestoneItem(self, m, MILESTONE_ROW))
-            del i
+        ms_items = [MilestoneItem(self, m, MILESTONE_ROW) for m in milestones]
+        for item in ms_items:
+            scene.addItem(item)
+        self.milestone_items = ms_items
+        self.layout_milestone_labels()
         for i, row in enumerate(rows, start=1):
             if row.dated:
                 bar = TaskBarItem(self, row, i)
@@ -136,7 +139,7 @@ class GanttChart(QGraphicsView):
             self.dep_items.append(item)
 
         if first:
-            self.scroll_to(self.today - timedelta(days=3))
+            self.scroll_to(self._initial_date(rows))
         elif old_center_date:
             self.scroll_to(old_center_date, center=True)
             self.verticalScrollBar().setValue(v)
@@ -144,6 +147,29 @@ class GanttChart(QGraphicsView):
             self.horizontalScrollBar().setValue(h)
             self.verticalScrollBar().setValue(v)
         self.viewport().update()
+
+    def layout_milestone_labels(self) -> None:
+        """Naziv milestone-a ide do sledećeg dijamanta, ne preko njega."""
+        items = sorted(self.milestone_items, key=lambda i: i.center().x())
+        for i, item in enumerate(items):
+            nxt = items[i + 1] if i + 1 < len(items) else None
+            if nxt is None:
+                item.max_label_w = 400.0
+            else:
+                space = nxt.center().x() - item.center().x() - 2 * item.SIZE - 14
+                item.max_label_w = max(0.0, space)
+            item.update()
+
+    def _initial_date(self, rows: list[RowData]) -> date:
+        """Prvi prikaz: od prvog zadatka koji još nije gotov, najviše nedelju dana pre danas."""
+        open_starts = [r.start for r in rows if r.dated and not r.done and r.start]
+        all_starts = [r.start for r in rows if r.dated and r.start]
+        anchor = min(open_starts) if open_starts else (min(all_starts) if all_starts else None)
+        start = self.today - timedelta(days=7)
+        if anchor is not None:
+            start = max(anchor, self.today - timedelta(days=30))
+            start = min(start, self.today - timedelta(days=3))
+        return start - timedelta(days=2)
 
     def refresh_dependencies(self) -> None:
         for item in self.dep_items:
@@ -352,8 +378,8 @@ class GanttChart(QGraphicsView):
         p.save()
         # Poništi samo transformaciju pogleda (skrol), a zadrži spoljnu (npr. uvećanje za PDF).
         p.setTransform(self.viewportTransform().inverted()[0], True)
-        self._paint_left(p)
         self._paint_header(p)
+        self._paint_left(p)
         self._paint_hint(p)
         p.restore()
 
@@ -361,7 +387,10 @@ class GanttChart(QGraphicsView):
         t = theme.tokens()
         w = self.viewport().width()
         hs = self.horizontalScrollBar().value()
-        p.fillRect(QRectF(0, 0, w, HEADER_H), QColor(t.surface))
+        p.save()
+        # vremenska osa se crta samo desno od leve kolone (ne preko naslova „Zadatak“)
+        p.setClipRect(QRectF(self.left_w, 0, w - self.left_w, HEADER_H + 1))
+        p.fillRect(QRectF(self.left_w, 0, w - self.left_w, HEADER_H), QColor(t.surface))
         top_ticks, bottom_ticks = header_ticks(self.scale, self.zoom)
         mid = HEADER_H / 2
         base = QFont(self.font())
@@ -392,8 +421,8 @@ class GanttChart(QGraphicsView):
         today_label = None
         for tick in bottom_ticks:
             x0 = self.left_w + tick.x - hs
-            if x0 + tick.width < self.left_w or x0 > w:
-                continue
+            if x0 < self.left_w - 1 or x0 > w:
+                continue  # delimično skrivena oznaka levo bi se videla kao „.“ ili pola broja
             label = tick.label
             if fm.horizontalAdvance(label) > tick.width - 4:
                 label = label.split(" ")[-1]
@@ -418,6 +447,7 @@ class GanttChart(QGraphicsView):
                 p.setPen(Qt.PenStyle.NoPen)
                 p.setBrush(QColor(t.today))
                 p.drawEllipse(QPointF(x, HEADER_H - 4), 3, 3)
+        p.restore()
         p.setPen(QPen(QColor(t.border), 1))
         p.drawLine(QPointF(0, HEADER_H - 0.5), QPointF(w, HEADER_H - 0.5))
 

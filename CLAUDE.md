@@ -58,7 +58,7 @@ share_worker/          Cloudflare Worker (src/index.js) + Node testovi + README 
 installer/             etapa.spec (PyInstaller), setup.iss (Inno Setup), icon.ico, launch.py
 scripts/               seed_demo.py, screenshots.py, build.ps1
 .github/workflows/     build-installer.yml: Windows instaler na GitHub-u (ručno ili tag v*)
-tests/                 167 testova (servisi + UI preko pytest-qt, bez prozora)
+tests/                 168 testova (servisi + UI preko pytest-qt, bez prozora)
 ```
 
 ## Pravila koda
@@ -176,6 +176,9 @@ v1.2 (verzija 1.2.0):
 - [x] 1.2.1: provera bezbednosti i baze (vidi pravila), oporavak oštećene baze, putanje sa %
 - [x] 1.2.2: bez isečenog teksta (prazan ekran, polja za opis, budžet, tabovi dijaloga, uzak
   prozor), detektor isečenog teksta i scenario test kroz celu aplikaciju
+- [x] 1.2.3: Gant: zaglavlje „Zadatak“ vidljivo, nazivi traka na podlozi (linije ih ne precrtavaju)
+  i levo od trake na kraju plana, nazivi milestone-a se ne preklapaju, veći razmak redova (38),
+  prvi prikaz od posla u toku, bez polovičnih oznaka datuma
 
 Šta korisnik treba sam da uradi (traži njegov nalog/računar):
 - instaler: tag `v<verzija>` na GitHub-u (Actions ga pravi i kači na Release) ili lokalno

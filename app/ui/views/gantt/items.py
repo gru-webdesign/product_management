@@ -58,7 +58,8 @@ class TaskBarItem(QGraphicsObject):
     def boundingRect(self) -> QRectF:
         r = self.bar_rect()
         label_w = QFontMetricsF(self._label_font()).horizontalAdvance(self.row.title) + 16
-        return r.adjusted(-2, -6, label_w + 2 * HANDLE_R + 10, 6)
+        extra = label_w + 2 * HANDLE_R + 14
+        return r.adjusted(-extra, -6, extra, 6)
 
     def _label_font(self) -> QFont:
         f = QFont(self.chart.font())
@@ -130,21 +131,43 @@ class TaskBarItem(QGraphicsObject):
             p.setPen(QPen(QColor(t.text), 1.5))
             p.drawRoundedRect(r.adjusted(-1.5, -1.5, 1.5, 1.5), radius + 1, radius + 1)
 
-        # naziv desno od trake
-        p.setFont(self._label_font())
-        p.setPen(QColor(t.faint if self.row.done else t.muted))
-        label_x = r.right() + (2 * HANDLE_R + 14 if self._hover else 14)
-        p.drawText(
-            QRectF(label_x, r.top() - 4, 600, r.height() + 8),
-            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
-            self.row.title,
-        )
+        # naziv desno od trake (ili levo, ako bi izašao van grafikona), na podlozi da ga linije
+        # zavisnosti i mreža ne precrtavaju
+        self._paint_label(p, r)
 
         if self._hover and not self._mode:
             c = self.handle_center()
             p.setPen(QPen(QColor(t.accent), 1.5))
             p.setBrush(QColor(t.surface))
             p.drawEllipse(c, HANDLE_R, HANDLE_R)
+
+    def label_rect(self) -> QRectF:
+        r = self.bar_rect()
+        fm = QFontMetricsF(self._label_font())
+        w = fm.horizontalAdvance(self.row.title) + 10
+        h = fm.height() + 4
+        gap = 2 * HANDLE_R + 12 if self._hover else 12
+        x = r.right() + gap
+        scene_right = self.chart.sceneRect().right() - 6
+        if x + w > scene_right and r.left() - gap - w > self.chart.left_w:
+            x = r.left() - gap - w  # na kraju plana naziv ide levo od trake
+        return QRectF(x, r.center().y() - h / 2, w, h)
+
+    def _paint_label(self, p: QPainter, r: QRectF) -> None:
+        t = theme.tokens()
+        box = self.label_rect()
+        bg = QColor(t.surface)
+        bg.setAlpha(200)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(bg)
+        p.drawRoundedRect(box, 4, 4)
+        p.setFont(self._label_font())
+        p.setPen(QColor(t.faint if self.row.done else t.muted))
+        p.drawText(
+            box.adjusted(5, 0, -3, 0),
+            Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+            self.row.title,
+        )
 
     # --- miš -------------------------------------------------------------------------------------
 
@@ -257,6 +280,7 @@ class MilestoneItem(QGraphicsObject):
         self._press_x = 0.0
         self._orig = m.date
         self._dragging = False
+        self.max_label_w = 400.0  # postavlja chart da se nazivi susednih milestone-a ne preklapaju
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.CursorShape.OpenHandCursor)
         self.setZValue(12)
@@ -301,14 +325,18 @@ class MilestoneItem(QGraphicsObject):
         p.setPen(QPen(QColor(t.surface), 1.5))
         p.setBrush(color)
         p.drawPath(path)
-        p.setPen(QColor(t.text))
         f = QFont(self.chart.font())
         f.setWeight(QFont.Weight.Medium)
+        fm = QFontMetricsF(f)
+        if self.max_label_w < fm.horizontalAdvance("Ab…") + 4:
+            return  # nema mesta do sledećeg milestone-a: naziv je u opisu (tooltip)
+        name = fm.elidedText(self.m.name, Qt.TextElideMode.ElideRight, self.max_label_w)
+        p.setPen(QColor(t.text))
         p.setFont(f)
         p.drawText(
-            QRectF(c.x() + s + 6, c.y() - 10, 400, 20),
+            QRectF(c.x() + s + 6, c.y() - 10, self.max_label_w + 4, 20),
             Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
-            self.m.name,
+            name,
         )
 
     def mousePressEvent(self, event) -> None:

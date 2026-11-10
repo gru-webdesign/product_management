@@ -8,8 +8,8 @@ from datetime import date
 from app.db.models import DependencyType, Priority, TaskStatus
 
 HEADER_H = 54
-ROW_H = 34
-BAR_H = 18
+ROW_H = 38
+BAR_H = 20
 LEFT_W = 300
 COST_W = 110
 HANDLE_R = 5
